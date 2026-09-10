@@ -14,6 +14,7 @@ nav:
   - Architecture: architecture.md
   - AI contracts: ai_contract.md
   - Protocol conformance: conformance.md
+  - scpi-driver-core migration review: scpi_driver_core_review.md
   - Safety: safety.md
   - Migration: migration.md
   - Release notes: release_notes.md

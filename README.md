@@ -209,6 +209,8 @@ Real-hardware all-public-API verification:
 
 The HIL suite inventories all 109 public keywords and requires explicit fixture/authorization profiles for operations that can disturb the DUT or instrument. Simulation evidence is never accepted as a substitute for D2/P1 physical evidence.
 
+For Linux/USBTMC setup specifics (including a kernel-driver-vs-`pyvisa-py` conflict worth knowing about before you start), see `guide/real_hardware_host_setup.md`.
+
 ## CI and GitHub Pages
 
 Active repository-root workflows are:

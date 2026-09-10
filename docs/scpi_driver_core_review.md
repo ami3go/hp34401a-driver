@@ -136,7 +136,9 @@ problem. This is an environment limitation, not a defect in the migration:
 constraint beyond what `pyvisa` requires. Re-running the real-hardware HIL
 suite (`tests/hil/verify_all_public_api_real_hardware.robot`) against this
 instrument from a machine (or container) with USB driver-rebind capability is
-a reasonable follow-up.
+a reasonable follow-up — see `guide/real_hardware_host_setup.md` (repo root)
+for exactly how to do that, including the udev-rule workaround for this
+specific kernel-driver-vs-libusb conflict.
 
 ## What was also fixed along the way (pre-existing, unrelated to scpi-driver-core)
 
