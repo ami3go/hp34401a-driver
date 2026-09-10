@@ -1,0 +1,14 @@
+schema_version: '1.0'
+bench_id: UNKNOWN
+resources:
+  - resource_id: dmm.hp34401a.primary
+    driver: rf_hp34401a
+    model: 34401A
+    serial_number: UNKNOWN
+    firmware_version: UNKNOWN
+    transport: VISA
+    endpoint: UNKNOWN
+    exclusive: true
+    fixture_id: UNKNOWN
+    calibration_status: UNKNOWN
+    notes: Replace UNKNOWN values in the bench repository; do not commit private assignments to the driver package.

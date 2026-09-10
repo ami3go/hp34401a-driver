@@ -1,0 +1,84 @@
+schema_version: '1.0'
+driver_name: rf_hp34401a
+release_version: '26.07'
+distribution_version: 26.7.0
+api_version: 1.1.0
+release_class: D0
+status: REMEDIATION_CANDIDATE
+entry_point: rf_hp34401a.Hp34401ALibrary
+plugin_entry_point: rf_hp34401a.plugin:Hp34401APluginProvider
+supported_devices:
+- HP 34401A
+- Agilent 34401A
+- Keysight 34401A
+supported_transports:
+- VISA_GPIB
+- SERIAL_RS232
+- SIMULATION
+python_versions:
+- '3.10'
+- '3.11'
+- '3.12'
+- '3.13'
+robot_framework_versions:
+- 7.x
+rfds_compliance:
+  RFDS-001: 1.2-partial-hardware-pending
+  RFDS-002: '1.1'
+  RFDS-003: 2.0-partial-deviation
+  RFDS-004: 2.0-partial-deviation
+  RFDS-005: '1.3'
+  RFDS-006: '1.0'
+  RFDS-007: '1.0'
+  RFDS-009: '1.0'
+  RFDS-010: '1.0'
+  RFDS-012: '1.0'
+  RFDS-013: '1.0'
+  RFDS-014: '1.0'
+  RFDS-015: '1.0'
+  RFDS-017: '3.0'
+  RFDS-018: 1.0-template
+  RFDS-019: '1.1'
+paths:
+  source: rf_hp34401a
+  core: hp34401a_dmm
+  public_api: api/public_api.yaml
+  capability_model: capability/capability_model.yaml
+  configuration_schema: config/schema.json
+  configuration_lock: config/schema.lock
+  ai_contract: ai/hp34401a_ai_contract.yaml
+  bench_template: examples/bench/system_ai_contract.template.yaml
+  tests: tests
+  hil_all_api: tests/hil/verify_all_public_api_real_hardware.robot
+  examples: examples
+  documentation: docs
+  history: history
+  review: review
+conformance:
+  public_keyword_count: 109
+  inventory_result: REQUIRES_RERUN_AFTER_REMEDIATION
+  vector_coverage: 109/109-static-inventory
+  simulator_execution: REQUIRES_RERUN_AFTER_REMEDIATION
+  real_hardware_execution: PENDING
+  evidence_path: results/call_protocol_conformance/hp34401a
+validation:
+  python_tests: PENDING_CURRENT_CI_RERUN
+  concrete_driver_coverage: PENDING_CURRENT_CI_RERUN
+  ai_contract: PENDING_CURRENT_CI_RERUN
+  static_protocol_conformance: PENDING_CURRENT_CI_RERUN
+  official_robot: PENDING_CURRENT_CI_RERUN
+  installed_wheel_plugin: PENDING_CURRENT_CI_RERUN
+  real_hardware: PENDING
+open_deviations:
+- HP34401A-DEV-002
+- HP34401A-DEV-003
+- HP34401A-DEV-004
+closed_deviations:
+- HP34401A-DEV-001
+- HP34401A-DEV-005
+integrity_status: PENDING_REGENERATION_FROM_FROZEN_COMMIT
+prohibited_claims:
+- D2 hardware validated
+- P1 production approved
+- B1 integrated bench
+- RFDS-003 fully conformant

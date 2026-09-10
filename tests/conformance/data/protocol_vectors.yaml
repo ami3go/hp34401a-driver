@@ -1,0 +1,2204 @@
+rfds019_version: '1.1'
+vectors:
+- id: HP34401A-KW-001
+  keyword: Check Communication
+  canonical_keyword: Check Communication
+  driver_method: check_communication
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: boolean
+    exact: true
+  setup_calls: &id001
+  - &id002
+    keyword: Open Simulated DMM
+    arguments:
+    - alias=dut
+    - reading=12.0
+- id: HP34401A-KW-002
+  keyword: Clear DMM Status
+  canonical_keyword: Clear DMM Status
+  driver_method: clear_dmm_status
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*CLS'
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-003
+  keyword: Clear Device Errors
+  canonical_keyword: Clear Device Errors
+  driver_method: clear_device_errors
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - '*CLS'
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-004
+  keyword: Close All DMMs
+  canonical_keyword: Disconnect All
+  driver_method: close_all_dmms
+  device_facing: true
+  risk_class: R1
+  arguments: []
+  expected_outbound:
+    contains:
+    - SYSTem:LOCal
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  factory: serial
+  setup_calls:
+  - keyword: Open DMM Via Serial
+    arguments:
+    - COM1
+    - alias=dut
+    - local_on_close=True
+- id: HP34401A-KW-005
+  keyword: Close DMM
+  canonical_keyword: Disconnect
+  driver_method: close_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:LOCal
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  factory: serial
+  setup_calls:
+  - keyword: Open DMM Via Serial
+    arguments:
+    - COM1
+    - alias=dut
+    - local_on_close=True
+- id: HP34401A-KW-006
+  keyword: Configure 2 Wire Resistance
+  canonical_keyword: Configure 2 Wire Resistance
+  driver_method: configure_2wire_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1000
+  - 10
+  - 'ON'
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:RESistance 1000,DEF
+    - SENSe:RESistance:NPLCycles 10
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-007
+  keyword: Configure 4 Wire Resistance
+  canonical_keyword: Configure 4 Wire Resistance
+  driver_method: configure_4wire_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1000
+  - 10
+  - 'ON'
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:FRESistance 1000,DEF
+    - SENSe:FRESistance:NPLCycles 10
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-008
+  keyword: Configure AC Current
+  canonical_keyword: Configure AC Current
+  driver_method: configure_ac_current
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1
+  - 20
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CURRent:AC 1,DEF
+    - SENSe:DETector:BANDwidth 20
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-009
+  keyword: Configure AC Voltage
+  canonical_keyword: Configure AC Voltage
+  driver_method: configure_ac_voltage
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 20
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:VOLTage:AC 10,DEF
+    - SENSe:DETector:BANDwidth 20
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-010
+  keyword: Configure Continuity
+  canonical_keyword: Configure Continuity
+  driver_method: configure_continuity
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CONTinuity
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-011
+  keyword: Configure DC Current
+  canonical_keyword: Configure DC Current
+  driver_method: configure_dc_current
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1
+  - 10
+  - 'ON'
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CURRent:DC 1,DEF
+    - SENSe:CURRent:DC:NPLCycles 10
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-012
+  keyword: Configure DC Voltage
+  canonical_keyword: Configure DC Voltage
+  driver_method: configure_dc_voltage
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 10
+  - 'ON'
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:VOLTage:DC 10,DEF
+    - SENSe:VOLTage:DC:NPLCycles 10
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-013
+  keyword: Configure Diode
+  canonical_keyword: Configure Diode
+  driver_method: configure_diode
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:DIODe
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-014
+  keyword: Configure Frequency
+  canonical_keyword: Configure Frequency
+  driver_method: configure_frequency
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 0.1
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:FREQuency 10,DEF
+    - SENSe:FREQuency:APERture 0.1
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-015
+  keyword: Configure Period
+  canonical_keyword: Configure Period
+  driver_method: configure_period
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 0.1
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:PERiod 10,DEF
+    - SENSe:PERiod:APERture 0.1
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-016
+  keyword: Connect
+  canonical_keyword: Connect
+  driver_method: connect
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - GPIB0::22::INSTR
+  - dut
+  - 10.0
+  - transport=VISA
+  expected_outbound:
+    contains_in_order:
+    - '*IDN?'
+    - SYSTem:VERSion?
+    - SYSTem:ERRor?
+    - '*CLS'
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - alias
+    - resource
+    - connected
+    - communication_ok
+    - transport
+    - identity
+    - timeout_s
+    - state
+    - simulated
+  factory: visa
+- id: HP34401A-KW-017
+  keyword: Connect DMM
+  canonical_keyword: Connect
+  driver_method: connect_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - GPIB0::22::INSTR
+  - VISA
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - '*IDN?'
+    - SYSTem:VERSion?
+    - SYSTem:ERRor?
+    - '*CLS'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '1991.0'
+  expected_return:
+    type: string
+    exact: dut
+  factory: visa
+- id: HP34401A-KW-018
+  keyword: DMM Error Queue Should Be Empty
+  canonical_keyword: Device Error Queue Should Be Empty
+  driver_method: dmm_error_queue_should_be_empty
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-019
+  keyword: DMM Model Should Be 34401A
+  canonical_keyword: DMM Model Should Be 34401A
+  driver_method: dmm_model_should_be_34401a
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-020
+  keyword: DMM Reading Should Be Between
+  canonical_keyword: DMM Reading Should Be Between
+  driver_method: dmm_reading_should_be_between
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - 11
+  - 13
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: &id003
+  - *id002
+  - keyword: Measure DC Voltage
+    arguments:
+    - 10
+    - 10
+    - alias=dut
+- id: HP34401A-KW-021
+  keyword: DMM Reading Should Be Close To
+  canonical_keyword: DMM Reading Should Be Close To
+  driver_method: dmm_reading_should_be_close_to
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - 12
+  - 0.1
+  - 0
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id003
+- id: HP34401A-KW-022
+  keyword: DMM Reading Should Be Greater Than
+  canonical_keyword: DMM Reading Should Be Greater Than
+  driver_method: dmm_reading_should_be_greater_than
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - 11
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id003
+- id: HP34401A-KW-023
+  keyword: DMM Reading Should Be Less Than
+  canonical_keyword: DMM Reading Should Be Less Than
+  driver_method: dmm_reading_should_be_less_than
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - 13
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id003
+- id: HP34401A-KW-024
+  keyword: DMM Reading Should Be Valid
+  canonical_keyword: DMM Reading Should Be Valid
+  driver_method: dmm_reading_should_be_valid
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id003
+- id: HP34401A-KW-025
+  keyword: DMM Reading Should Not Be Overload
+  canonical_keyword: DMM Reading Should Not Be Overload
+  driver_method: dmm_reading_should_not_be_overload
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id003
+- id: HP34401A-KW-026
+  keyword: DMM Self Test Should Pass
+  canonical_keyword: DMM Self Test Should Pass
+  driver_method: dmm_self_test_should_pass
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*TST?'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '0'
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-027
+  keyword: DMM Should Be Connected
+  canonical_keyword: DMM Should Be Connected
+  driver_method: dmm_should_be_connected
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-028
+  keyword: DMM Should Have No Errors
+  canonical_keyword: DMM Should Have No Errors
+  driver_method: dmm_should_have_no_errors
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - conformance
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-029
+  keyword: Delete Driver Configuration Profile
+  canonical_keyword: Delete Driver Configuration Profile
+  driver_method: delete_driver_configuration_profile
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - conformance
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  profile_temp: true
+  setup_calls:
+  - keyword: Save Driver Configuration
+    arguments:
+    - conformance
+    - true
+- id: HP34401A-KW-030
+  keyword: Device Error Queue Should Be Empty
+  canonical_keyword: Device Error Queue Should Be Empty
+  driver_method: device_error_queue_should_be_empty
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-031
+  keyword: Disconnect
+  canonical_keyword: Disconnect
+  driver_method: disconnect
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:LOCal
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  factory: serial
+  setup_calls:
+  - keyword: Open DMM Via Serial
+    arguments:
+    - COM1
+    - alias=dut
+    - local_on_close=True
+- id: HP34401A-KW-032
+  keyword: Disconnect All
+  canonical_keyword: Disconnect All
+  driver_method: disconnect_all
+  device_facing: true
+  risk_class: R1
+  arguments: []
+  expected_outbound:
+    contains:
+    - SYSTem:LOCal
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  factory: serial
+  setup_calls:
+  - keyword: Open DMM Via Serial
+    arguments:
+    - COM1
+    - alias=dut
+    - local_on_close=True
+- id: HP34401A-KW-033
+  keyword: Disconnect DMM
+  canonical_keyword: Disconnect
+  driver_method: disconnect_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:LOCal
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  factory: serial
+  setup_calls:
+  - keyword: Open DMM Via Serial
+    arguments:
+    - COM1
+    - alias=dut
+    - local_on_close=True
+- id: HP34401A-KW-034
+  keyword: Export Diagnostic Bundle
+  canonical_keyword: Export Diagnostic Bundle
+  driver_method: export_diagnostic_bundle
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+- id: HP34401A-KW-035
+  keyword: Export Driver Configuration
+  canonical_keyword: Export Driver Configuration
+  driver_method: export_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - null
+  - 2
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    contains: rf_hp34401a.configuration
+- id: HP34401A-KW-036
+  keyword: Fetch DMM Readings
+  canonical_keyword: Fetch DMM Readings
+  driver_method: fetch_dmm_readings
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - FETCh?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: list
+    minimum_length: 1
+  setup_calls:
+  - *id002
+  - &id004
+    keyword: Configure DC Voltage
+    arguments:
+    - 10
+    - 10
+    - 'ON'
+    - alias=dut
+  - keyword: Set DMM Trigger Source
+    arguments:
+    - BUS
+    - alias=dut
+  - keyword: Initiate DMM Measurement
+    arguments:
+    - alias=dut
+  - keyword: Send DMM Bus Trigger
+    arguments:
+    - alias=dut
+- id: HP34401A-KW-037
+  keyword: Find Driver Capabilities
+  canonical_keyword: Find Driver Capabilities
+  driver_method: find_driver_capabilities
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - measure.
+  - null
+  - low
+  - false
+  - static
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 1
+- id: HP34401A-KW-038
+  keyword: Get Active Connection
+  canonical_keyword: Get Active Connection
+  driver_method: get_active_connection
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    exact: dut
+  setup_calls: *id001
+- id: HP34401A-KW-039
+  keyword: Get Active DMM Alias
+  canonical_keyword: Get Active Connection
+  driver_method: get_active_dmm_alias
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    exact: dut
+  setup_calls: *id001
+- id: HP34401A-KW-040
+  keyword: Get All Device Errors
+  canonical_keyword: Get All Device Errors
+  driver_method: get_all_device_errors
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 5
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: list
+    minimum_length: 1
+  setup_calls: *id001
+- id: HP34401A-KW-041
+  keyword: Get Communication Timeout
+  canonical_keyword: Get Communication Timeout
+  driver_method: get_communication_timeout
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: float
+    exact: 7.5
+  setup_calls:
+  - *id002
+  - keyword: Set Communication Timeout
+    arguments:
+    - 7.5
+    - dut
+- id: HP34401A-KW-042
+  keyword: Get Connection State
+  canonical_keyword: Get Connection State
+  driver_method: get_connection_state
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  - true
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - alias
+    - resource
+    - connected
+    - communication_ok
+    - transport
+    - identity
+    - timeout_s
+    - state
+    - simulated
+  setup_calls: *id001
+- id: HP34401A-KW-043
+  keyword: Get DMM Driver Version
+  canonical_keyword: Get DMM Driver Version
+  driver_method: get_dmm_driver_version
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    exact: 1.2.8
+- id: HP34401A-KW-044
+  keyword: Get DMM Error Queue
+  canonical_keyword: Get All Device Errors
+  driver_method: get_dmm_error_queue
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 5
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: list
+    minimum_length: 1
+  setup_calls: *id001
+- id: HP34401A-KW-045
+  keyword: Get DMM Health
+  canonical_keyword: Get DMM Health
+  driver_method: get_dmm_health
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - connected
+    - error_queue_clean
+    - state
+  setup_calls: *id001
+- id: HP34401A-KW-046
+  keyword: Get DMM Input Terminal
+  canonical_keyword: Get DMM Input Terminal
+  driver_method: get_dmm_input_terminal
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - ROUTe:TERMinals?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - FRONT
+  expected_return:
+    type: string
+    exact: FRONT
+  setup_calls: *id001
+- id: HP34401A-KW-047
+  keyword: Get DMM State
+  canonical_keyword: Get DMM State
+  driver_method: get_dmm_state
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+  setup_calls: *id001
+- id: HP34401A-KW-048
+  keyword: Get Device Error
+  canonical_keyword: Get Device Error
+  driver_method: get_device_error
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - code
+    - message
+    - raw
+  setup_calls: *id001
+- id: HP34401A-KW-049
+  keyword: Get Driver Capabilities
+  canonical_keyword: Get Driver Capabilities
+  driver_method: get_driver_capabilities
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 1
+- id: HP34401A-KW-050
+  keyword: Get Driver Capability
+  canonical_keyword: Get Driver Capability
+  driver_method: get_driver_capability
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - measure.voltage.dc
+  - static
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - capability_id
+    - binding
+    - availability
+- id: HP34401A-KW-051
+  keyword: Get Driver Capability Model
+  canonical_keyword: Get Driver Capability Model
+  driver_method: get_driver_capability_model
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - static
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - schema
+    - driver
+    - capabilities
+    - validation
+- id: HP34401A-KW-052
+  keyword: Get Driver Configuration
+  canonical_keyword: Get Driver Configuration
+  driver_method: get_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - EFFECTIVE
+  - null
+  - true
+  - true
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - profile
+    - settings
+    - metadata
+- id: HP34401A-KW-053
+  keyword: Get Driver Configuration Schema
+  canonical_keyword: Get Driver Configuration Schema
+  driver_method: get_driver_configuration_schema
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - $schema
+    - properties
+- id: HP34401A-KW-054
+  keyword: Get Driver Default Configuration
+  canonical_keyword: Get Driver Default Configuration
+  driver_method: get_driver_default_configuration
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - rfds014_version
+    - settings
+- id: HP34401A-KW-055
+  keyword: Get Driver Features
+  canonical_keyword: Get Driver Features
+  driver_method: get_driver_features
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - static
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - measurement_functions
+    - multi_session
+- id: HP34401A-KW-056
+  keyword: Get Driver Information
+  canonical_keyword: Get Driver Information
+  driver_method: get_driver_information
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - name
+    - package_version
+    - api_version
+    - api_spec
+    - api_spec_version
+    - robot_framework_min_version
+    - python_min_version
+    - library_scope
+    - transport_types
+    - capability_ids
+    - simulation_supported
+    - identity_source
+- id: HP34401A-KW-057
+  keyword: Get Driver Metadata
+  canonical_keyword: Get Driver Metadata
+  driver_method: get_driver_metadata
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - driver_version
+    - core_driver_version
+    - state
+- id: HP34401A-KW-058
+  keyword: Get Identity
+  canonical_keyword: Get Identity
+  driver_method: get_identity
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  - true
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: string
+    contains: 34401A
+  setup_calls: *id001
+- id: HP34401A-KW-059
+  keyword: Get Last DMM Reading
+  canonical_keyword: Get Last DMM Reading
+  driver_method: get_last_dmm_reading
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - function
+    - value
+    - unit
+    - is_valid
+    - alias
+  setup_calls: *id003
+- id: HP34401A-KW-060
+  keyword: Get Last DMM Reading Value
+  canonical_keyword: Get Last DMM Reading Value
+  driver_method: get_last_dmm_reading_value
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: float
+    exact: 12.0
+  setup_calls: *id003
+- id: HP34401A-KW-061
+  keyword: Get Open DMM Aliases
+  canonical_keyword: Get Open DMM Aliases
+  driver_method: get_open_dmm_aliases
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 1
+  setup_calls: *id001
+- id: HP34401A-KW-062
+  keyword: Get Robot DMM Library Version
+  canonical_keyword: Get Robot DMM Library Version
+  driver_method: get_robot_dmm_library_version
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    exact: '26.07'
+- id: HP34401A-KW-063
+  keyword: Identify DMM
+  canonical_keyword: Get Identity
+  driver_method: identify_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - manufacturer
+    - model
+    - serial
+    - firmware
+    - raw
+  setup_calls: *id001
+- id: HP34401A-KW-064
+  keyword: Import Driver Configuration
+  canonical_keyword: Import Driver Configuration
+  driver_method: import_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - config/default.json
+  - true
+  - true
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - settings
+- id: HP34401A-KW-065
+  keyword: Initiate DMM Measurement
+  canonical_keyword: Initiate DMM Measurement
+  driver_method: initiate_dmm_measurement
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - DATA:FEED RDG_STORE,"CALC"
+    - INITiate
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: &id005
+  - *id002
+  - *id004
+- id: HP34401A-KW-066
+  keyword: Is Connected
+  canonical_keyword: Is Connected
+  driver_method: is_connected
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: boolean
+    exact: true
+  setup_calls: *id001
+- id: HP34401A-KW-067
+  keyword: List Connections
+  canonical_keyword: List Connections
+  driver_method: list_connections
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 1
+  setup_calls: *id001
+- id: HP34401A-KW-068
+  keyword: List Driver Configuration Profiles
+  canonical_keyword: List Driver Configuration Profiles
+  driver_method: list_driver_configuration_profiles
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 1
+  profile_temp: true
+  setup_calls:
+  - keyword: Save Driver Configuration
+    arguments:
+    - conformance
+    - true
+- id: HP34401A-KW-069
+  keyword: List VISA Resources
+  canonical_keyword: List VISA Resources
+  driver_method: list_visa_resources
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: list
+    minimum_length: 2
+  pyvisa_stub: true
+- id: HP34401A-KW-070
+  keyword: Load Driver Configuration
+  canonical_keyword: Load Driver Configuration
+  driver_method: load_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - conformance
+  - false
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - settings
+  profile_temp: true
+  setup_calls:
+  - keyword: Save Driver Configuration
+    arguments:
+    - conformance
+    - true
+- id: HP34401A-KW-071
+  keyword: Measure 2 Wire Resistance
+  canonical_keyword: Measure 2 Wire Resistance
+  driver_method: measure_2wire_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1000
+  - 10
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:RESistance 1000,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-072
+  keyword: Measure 4 Wire Resistance
+  canonical_keyword: Measure 4 Wire Resistance
+  driver_method: measure_4wire_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1000
+  - 10
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:FRESistance 1000,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-073
+  keyword: Measure AC Current
+  canonical_keyword: Measure AC Current
+  driver_method: measure_ac_current
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1
+  - 20
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CURRent:AC 1,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-074
+  keyword: Measure AC Voltage
+  canonical_keyword: Measure AC Voltage
+  driver_method: measure_ac_voltage
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 20
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:VOLTage:AC 10,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-075
+  keyword: Measure Continuity
+  canonical_keyword: Measure Continuity
+  driver_method: measure_continuity
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CONTinuity
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-076
+  keyword: Measure DC Current
+  canonical_keyword: Measure DC Current
+  driver_method: measure_dc_current
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 1
+  - 10
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:CURRent:DC 1,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-077
+  keyword: Measure DC Voltage
+  canonical_keyword: Measure DC Voltage
+  driver_method: measure_dc_voltage
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 10
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:VOLTage:DC 10,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-078
+  keyword: Measure Diode
+  canonical_keyword: Measure Diode
+  driver_method: measure_diode
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:DIODe
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-079
+  keyword: Measure Frequency
+  canonical_keyword: Measure Frequency
+  driver_method: measure_frequency
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 0.1
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:FREQuency 10,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-080
+  keyword: Measure Period
+  canonical_keyword: Measure Period
+  driver_method: measure_period
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - 10
+  - 0.1
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - CONFigure:PERiod 10,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-081
+  keyword: Open DMM Via Serial
+  canonical_keyword: Open DMM Via Serial
+  driver_method: open_dmm_via_serial
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - COM1
+  - alias=dut
+  - local_on_close=True
+  expected_outbound:
+    contains_in_order:
+    - SYSTem:REMote
+    - '*IDN?'
+    - '*IDN?'
+    - SYSTem:VERSion?
+    - '*CLS'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '1991.0'
+  expected_return:
+    type: string
+    exact: dut
+  factory: serial
+- id: HP34401A-KW-082
+  keyword: Open DMM Via VISA
+  canonical_keyword: Open DMM Via VISA
+  driver_method: open_dmm_via_visa
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - GPIB0::22::INSTR
+  - alias=dut
+  expected_outbound:
+    contains_in_order:
+    - '*IDN?'
+    - SYSTem:VERSion?
+    - SYSTem:ERRor?
+    - '*CLS'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '1991.0'
+  expected_return:
+    type: string
+    exact: dut
+  factory: visa
+- id: HP34401A-KW-083
+  keyword: Open Simulated DMM
+  canonical_keyword: Open Simulated DMM
+  driver_method: open_simulated_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - alias=dut
+  - reading=12.0
+  expected_outbound:
+    contains_in_order:
+    - '*IDN?'
+    - SYSTem:VERSion?
+    - SYSTem:ERRor?
+    - '*CLS'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '1991.0'
+  expected_return:
+    type: string
+    exact: dut
+- id: HP34401A-KW-084
+  keyword: Query DMM Command
+  canonical_keyword: Query Raw Command
+  driver_method: query_dmm_command
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - '*IDN?'
+  - dut
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: string
+    contains: 34401A
+  setup_calls:
+  - *id002
+  - keyword: Set Raw I/O Enabled
+    arguments:
+    - true
+- id: HP34401A-KW-085
+  keyword: Query Raw Command
+  canonical_keyword: Query Raw Command
+  driver_method: query_raw_command
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - '*IDN?'
+  - dut
+  - 10.0
+  expected_outbound:
+    contains:
+    - '*IDN?'
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: string
+    contains: 34401A
+  setup_calls:
+  - *id002
+  - keyword: Set Raw I/O Enabled
+    arguments:
+    - true
+- id: HP34401A-KW-086
+  keyword: Read DMM
+  canonical_keyword: Read DMM
+  driver_method: read_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - TRIGger:SOURce IMMediate
+    - TRIGger:COUNt 1
+    - SAMPle:COUNt 1
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id005
+- id: HP34401A-KW-087
+  keyword: Read DMM Error
+  canonical_keyword: Get Device Error
+  driver_method: read_dmm_error
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - code
+    - message
+    - raw
+  setup_calls: *id001
+- id: HP34401A-KW-088
+  keyword: Read DMM Once With Bus Trigger
+  canonical_keyword: Read DMM Once With Bus Trigger
+  driver_method: read_dmm_once_with_bus_trigger
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains_in_order:
+    - TRIGger:SOURce BUS
+    - TRIGger:COUNt 1
+    - SAMPle:COUNt 1
+    - DATA:FEED RDG_STORE,"CALC"
+    - INITiate
+    - '*TRG'
+    - FETCh?
+    forbidden:
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id005
+- id: HP34401A-KW-089
+  keyword: Read Raw Response
+  canonical_keyword: Read Raw Response
+  driver_method: read_raw_response
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - dut
+  - 10.0
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+  setup_calls:
+  - *id002
+  - keyword: Set Raw I/O Enabled
+    arguments:
+    - true
+- id: HP34401A-KW-090
+  keyword: Read Stable Resistance
+  canonical_keyword: Read Stable Resistance
+  driver_method: read_stable_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - expected_ohm=12
+  - range_value=100
+  - nplc=0.02
+  - final_nplc=None
+  - min_settle=0 s
+  - max_wait=300 ms
+  - sample_interval=1 ms
+  - window_size=3
+  - alias=dut
+  expected_outbound:
+    contains:
+    - CONFigure:RESistance 100,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: float
+  setup_calls: *id001
+- id: HP34401A-KW-091
+  keyword: Recover DMM
+  canonical_keyword: Recover DMM
+  driver_method: recover_dmm
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - SYSTem:ERRor?
+    clear_count_min: 1
+  expected_inbound:
+    response_required: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - succeeded
+    - actions
+    - state
+  setup_calls: *id001
+- id: HP34401A-KW-092
+  keyword: Refresh Driver Capabilities
+  canonical_keyword: Refresh Driver Capabilities
+  driver_method: refresh_driver_capabilities
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - static
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - source
+    - capabilities
+- id: HP34401A-KW-093
+  keyword: Require DMM Input Terminal
+  canonical_keyword: Require DMM Input Terminal
+  driver_method: require_dmm_input_terminal
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - FRONT
+  - dut
+  expected_outbound:
+    contains:
+    - ROUTe:TERMinals?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - FRONT
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-094
+  keyword: Reset Device
+  canonical_keyword: Reset Device
+  driver_method: reset_device
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - dut
+  - false
+  expected_outbound:
+    contains:
+    - '*RST'
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - reset_type
+    - ready
+    - elapsed_s
+    - settings_cleared
+  setup_calls: *id001
+- id: HP34401A-KW-095
+  keyword: Reset Driver Configuration
+  canonical_keyword: Reset Driver Configuration
+  driver_method: reset_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - settings
+    - metadata
+- id: HP34401A-KW-096
+  keyword: Run DMM Self Test
+  canonical_keyword: Run DMM Self Test
+  driver_method: run_dmm_self_test
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*TST?'
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '0'
+  expected_return:
+    type: dictionary
+    required_keys:
+    - passed
+    - code
+    - raw
+    - message
+  setup_calls: *id001
+- id: HP34401A-KW-097
+  keyword: Save Driver Configuration
+  canonical_keyword: Save Driver Configuration
+  driver_method: save_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - conformance
+  - true
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    contains: conformance.json
+  profile_temp: true
+- id: HP34401A-KW-098
+  keyword: Select Connection
+  canonical_keyword: Select Connection
+  driver_method: select_connection
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - alias
+    - connected
+  setup_calls:
+  - *id002
+  - keyword: Open Simulated DMM
+    arguments:
+    - alias=second
+    - reading=13
+- id: HP34401A-KW-099
+  keyword: Select DMM
+  canonical_keyword: Select Connection
+  driver_method: select_dmm
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: string
+    exact: dut
+  setup_calls:
+  - *id002
+  - keyword: Open Simulated DMM
+    arguments:
+    - alias=second
+    - reading=13.0
+- id: HP34401A-KW-100
+  keyword: Send DMM Bus Trigger
+  canonical_keyword: Send DMM Bus Trigger
+  driver_method: send_dmm_bus_trigger
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - dut
+  expected_outbound:
+    contains:
+    - '*TRG'
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls:
+  - *id002
+  - *id004
+  - keyword: Set DMM Trigger Source
+    arguments:
+    - BUS
+    - alias=dut
+- id: HP34401A-KW-101
+  keyword: Set Communication Timeout
+  canonical_keyword: Set Communication Timeout
+  driver_method: set_communication_timeout
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - 7.5
+  - dut
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: float
+    exact: 7.5
+  setup_calls: *id001
+- id: HP34401A-KW-102
+  keyword: Set DMM Trigger Source
+  canonical_keyword: Set DMM Trigger Source
+  driver_method: set_dmm_trigger_source
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - BUS
+  - dut
+  expected_outbound:
+    contains:
+    - TRIGger:SOURce BUS
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls: *id001
+- id: HP34401A-KW-103
+  keyword: Set Raw I/O Enabled
+  canonical_keyword: Set Raw I/O Enabled
+  driver_method: set_raw_io_enabled
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - true
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: boolean
+    exact: true
+- id: HP34401A-KW-104
+  keyword: Stable Resistance Should Be Between
+  canonical_keyword: Stable Resistance Should Be Between
+  driver_method: stable_resistance_should_be_between
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - $STABLE_RESULT
+  - 900
+  - 1100
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+- id: HP34401A-KW-105
+  keyword: Try Read Stable Resistance
+  canonical_keyword: Try Read Stable Resistance
+  driver_method: try_read_stable_resistance
+  device_facing: true
+  risk_class: R1
+  arguments:
+  - expected_ohm=12
+  - range_value=100
+  - nplc=0.02
+  - final_nplc=None
+  - min_settle=0 s
+  - max_wait=300 ms
+  - sample_interval=1 ms
+  - window_size=3
+  - alias=dut
+  expected_outbound:
+    contains:
+    - CONFigure:RESistance 100,DEF
+    - READ?
+  expected_inbound:
+    response_required: true
+    raw_contains:
+    - '12.0'
+  expected_return:
+    type: dictionary
+    required_keys:
+    - stable
+    - value
+    - samples
+    - elapsed_s
+  setup_calls: *id001
+- id: HP34401A-KW-106
+  keyword: Validate Driver Capabilities
+  canonical_keyword: Validate Driver Capabilities
+  driver_method: validate_driver_capabilities
+  device_facing: false
+  risk_class: R0
+  arguments: []
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - valid
+    - capability_count
+    - missing_keyword_bindings
+- id: HP34401A-KW-107
+  keyword: Validate Driver Configuration
+  canonical_keyword: Validate Driver Configuration
+  driver_method: validate_driver_configuration
+  device_facing: false
+  risk_class: R0
+  arguments:
+  - config/default.json
+  - true
+  expected_outbound:
+    none: true
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: dictionary
+    required_keys:
+    - valid
+    - configuration
+- id: HP34401A-KW-108
+  keyword: Write DMM Command
+  canonical_keyword: Write Raw Command
+  driver_method: write_dmm_command
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - '*CLS'
+  - dut
+  expected_outbound:
+    contains:
+    - '*CLS'
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls:
+  - *id002
+  - keyword: Set Raw I/O Enabled
+    arguments:
+    - true
+- id: HP34401A-KW-109
+  keyword: Write Raw Command
+  canonical_keyword: Write Raw Command
+  driver_method: write_raw_command
+  device_facing: true
+  risk_class: R2
+  arguments:
+  - '*CLS'
+  - dut
+  expected_outbound:
+    contains:
+    - '*CLS'
+  expected_inbound:
+    no_response: true
+  expected_return:
+    type: 'null'
+  setup_calls:
+  - *id002
+  - keyword: Set Raw I/O Enabled
+    arguments:
+    - true
+protocol_error_vectors:
+- id: HP34401A-ERR-001
+  keyword: Query DMM Command
+  setup_calls: *id001
+  transport_mutation:
+    alias: dut
+    timeout_on:
+    - '*IDN?'
+  arguments:
+  - '*IDN?'
+  - dut
+  expected_error_pattern: '*timeout*'
+  remove_timeout_on:
+  - '*IDN?'
+  recovery:
+    keyword: Identify DMM
+    arguments:
+    - dut
+    expected_return:
+      type: dictionary
+      required_keys:
+      - model
+- id: HP34401A-ERR-002
+  keyword: Measure DC Voltage
+  setup_calls: *id001
+  transport_mutation:
+    alias: dut
+    responses:
+      READ?: MALFORMED
+  arguments:
+  - 10
+  - 10
+  - dut
+  expected_error_pattern: '*parse*'
+  recovery_responses:
+    READ?: '12.0'
+  recovery:
+    keyword: Measure DC Voltage
+    arguments:
+    - 10
+    - 10
+    - dut
+    expected_return:
+      type: float
+      exact: 12.0
+- id: HP34401A-ERR-003
+  keyword: DMM Error Queue Should Be Empty
+  setup_calls: *id001
+  transport_mutation:
+    alias: dut
+    error_queue:
+    - -100,"Command error"
+  arguments:
+  - dut
+  expected_error_pattern: '*DMM error queue is not empty*'
+  recovery:
+    keyword: Identify DMM
+    arguments:
+    - dut
+    expected_return:
+      type: dictionary
+      required_keys:
+      - model
+- id: HP34401A-ERR-004
+  keyword: Write DMM Command
+  setup_calls: *id001
+  arguments:
+  - CALibration:SECure:STATe OFF
+  - dut
+  expected_error_pattern: '*Calibration commands are blocked*'
+  recovery:
+    keyword: Identify DMM
+    arguments:
+    - dut
+    expected_return:
+      type: dictionary
+      required_keys:
+      - model

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["manufacturer", "model", "serial", "firmware", "raw"],
+  "properties": {
+    "manufacturer": {"type": "string"},
+    "model": {"const": "34401A"},
+    "serial": {"type": "string"},
+    "firmware": {"type": "string"},
+    "raw": {"type": "string"}
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:rf-hp34401a-26.07-remediation-candidate",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "name": "rf-hp34401a",
+      "version": "26.7.0"
+    },
+    "tools": [
+      {
+        "vendor": "RFDS",
+        "name": "source dependency inventory",
+        "version": "1.0"
+      }
+    ],
+    "properties": [
+      {
+        "name": "candidate_status",
+        "value": "REQUIRES_REBUILD_FROM_FROZEN_COMMIT"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "robotframework",
+      "version": ">=7,<8",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "rfds-core",
+      "version": ">=1.0,<2.0",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "jsonschema",
+      "version": ">=4.20,<5",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "pyvisa",
+      "version": ">=1.14",
+      "scope": "optional"
+    },
+    {
+      "type": "library",
+      "name": "pyserial",
+      "version": ">=3.5",
+      "scope": "optional"
+    },
+    {
+      "type": "library",
+      "name": "hp34401a_dmm",
+      "version": "1.2.8",
+      "scope": "embedded"
+    }
+  ],
+  "properties": [
+    {
+      "name": "release_class",
+      "value": "D0"
+    },
+    {
+      "name": "hardware_validation",
+      "value": "PENDING"
+    },
+    {
+      "name": "rfds003_base_class_migration",
+      "value": "PENDING_AUTHORITATIVE_RFDS_CORE"
+    }
+  ]
+}

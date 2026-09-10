@@ -1,0 +1,134 @@
+rfds018_version: "1.0"
+contract_status: TEMPLATE
+bench_identity:
+  name: UNKNOWN
+  location: UNKNOWN
+  owner: UNKNOWN
+  contract_version: "1.0.0"
+available_drivers:
+  - driver_name: "rf_hp34401a.Hp34401ALibrary"
+    driver_version: "26.3.0"
+    ai_contract: "ai/hp34401a_ai_contract.yaml"
+    aliases: ["dmm"]
+    qualification: ["UNIT_TESTED", "SIMULATOR_VALIDATED"]
+physical_topology:
+  connections:
+    - from: "DUT.UNKNOWN_MEASUREMENT_POINT"
+      to: "dmm.INPUT_HI"
+      via: "UNKNOWN_FIXTURE_OR_RELAY_PATH"
+    - from: "DUT.REFERENCE_RETURN"
+      to: "dmm.INPUT_LO"
+      via: "UNKNOWN_FIXTURE_OR_RELAY_PATH"
+  four_wire_connections:
+    - from: "DUT.UNKNOWN_SENSE_HIGH"
+      to: "dmm.SENSE_HI"
+      via: "UNKNOWN"
+    - from: "DUT.UNKNOWN_SENSE_LOW"
+      to: "dmm.SENSE_LO"
+      via: "UNKNOWN"
+shared_resources:
+  - name: "DMM_VISA_RESOURCE"
+    type: "VISA"
+    value: "${DMM_RESOURCE}"
+    access: "EXCLUSIVE"
+  - name: "DMM_TERMINALS"
+    type: "PHYSICAL_FIXTURE"
+    value: "UNKNOWN"
+    access: "EXCLUSIVE"
+signal_graph:
+  nodes:
+    - { name: "DUT_MEASUREMENT_POINT", role: "PRODUCER_OR_PASSIVE_DUT_NODE" }
+    - { name: "DMM_INPUT", role: "MEASUREMENT_CONSUMER" }
+  edges:
+    - from: "DUT_MEASUREMENT_POINT"
+      to: "DMM_INPUT"
+      routing_driver: "UNKNOWN_OPTIONAL_RELAY_DRIVER"
+      enabled_by: "UNKNOWN_OPTIONAL_RELAY_KEYWORD"
+preferred_measurement_sources:
+  dc_voltage:
+    driver: "rf_hp34401a.Hp34401ALibrary"
+    keyword: "Measure DC Voltage"
+    priority: "PRIMARY"
+  resistance:
+    driver: "rf_hp34401a.Hp34401ALibrary"
+    keyword: "Read Stable Resistance"
+    priority: "PRIMARY"
+  dc_current:
+    driver: "rf_hp34401a.Hp34401ALibrary"
+    keyword: "Measure DC Current"
+    priority: "SECONDARY"
+    precondition: "Series current path and current-limited source verified by operator or fixture interlock."
+requirement_coverage:
+  - requirement_id: "UNKNOWN_DUT_DCV_REQUIREMENT"
+    driver_contract: "ai/hp34401a_ai_contract.yaml"
+    verification_objective: "VO-DMM-002"
+  - requirement_id: "UNKNOWN_DUT_RESISTANCE_REQUIREMENT"
+    driver_contract: "ai/hp34401a_ai_contract.yaml"
+    verification_objective: "VO-DMM-003"
+test_templates:
+  - name: "DUT DC Voltage Verification"
+    required_drivers: ["rf_hp34401a.Hp34401ALibrary", "UNKNOWN_DUT_SOURCE_OR_CONTROLLER"]
+    workflow:
+      - "Prepare DUT in required operating state"
+      - "Connect DMM  resource=${DMM_RESOURCE}  transport=AUTO  alias=dmm"
+      - "Require DMM Input Terminal  ${DMM_TERMINAL}  alias=dmm"
+      - "WAIT bench stabilization"
+      - "Measure DC Voltage  range_value=AUTO  nplc=10  alias=dmm"
+      - "DMM Reading Should Be Between  ${MIN_V}  ${MAX_V}  alias=dmm"
+      - "Close All DMMs"
+  - name: "Switched Resistance Verification"
+    required_drivers: ["rf_hp34401a.Hp34401ALibrary", "UNKNOWN_RELAY_DRIVER", "UNKNOWN_DUT_POWER_DRIVER"]
+    workflow:
+      - "Disable all external DUT power sources"
+      - "Verify zero-energy state using bench-approved oracle"
+      - "Open all measurement relays"
+      - "Close selected measurement relay"
+      - "WAIT relay and DUT stabilization"
+      - "Read Stable Resistance  expected_ohm=${EXPECTED_OHM}  alias=dmm"
+      - "DMM Reading Should Be Close To  ${EXPECTED_OHM}  relative_tolerance=${REL_TOL}  alias=dmm"
+      - "Open selected measurement relay"
+bench_constraints:
+  operator_actions:
+    - "Confirm front/rear terminal selector matches the fixture before automated execution."
+    - "Confirm current lead location before any current-mode test."
+  safety_zones:
+    - name: "DMM_INPUT_ZONE"
+      maximum_voltage_v: UNKNOWN
+      maximum_current_a: UNKNOWN
+      source: "Site-specific bench safety assessment"
+  maximum_simultaneous_operations: 1
+  environmental_limits:
+    ambient_temperature_c: UNKNOWN
+    relative_humidity_percent: UNKNOWN
+scheduling_rules:
+  resource_conflicts:
+    - "No two drivers or processes may own DMM_VISA_RESOURCE concurrently."
+    - "No relay may change state while a current-mode measurement path is energized."
+  driver_ordering:
+    - "Sources and DUT state shall be configured before voltage measurement."
+    - "All external sources shall be disabled and verified before resistance, continuity, or diode measurement."
+  stabilization_rules:
+    - after: "Relay route change"
+      before: "DMM measurement"
+      minimum_delay_s: 0.2
+    - after: "DUT resistance setpoint change"
+      before: "Read Stable Resistance"
+      minimum_delay_s: 0.5
+  parallel_execution_limits:
+    dmm_operations: 1
+global_safety:
+  forbidden_sequences:
+    - never: ["ANY_POWER_SOURCE.Enable Output", "Measure 2 Wire Resistance"]
+      reason: "Resistance mode applies internal stimulus and requires a de-energized DUT."
+    - never: ["ANY_POWER_SOURCE.Enable Output", "Measure 4 Wire Resistance"]
+      reason: "Four-wire resistance mode requires a de-energized DUT."
+  emergency_shutdown_workflow:
+    - "Disable all source outputs"
+    - "Open all relay routes"
+    - "Close All DMMs"
+    - "Place DUT in site-defined safe state"
+open_questions:
+  - "Replace every UNKNOWN topology node with the actual DUT and fixture connection."
+  - "Declare the power-source and relay driver contracts used by this bench."
+  - "Define site-specific voltage, current, environmental, and operator authorization limits."
+  - "Record physical HIL qualification evidence and approved firmware versions."

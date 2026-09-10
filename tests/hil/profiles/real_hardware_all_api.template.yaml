@@ -1,0 +1,63 @@
+schema_version: '1.0'
+profile_id: hp34401a.real_hardware_all_public_api
+driver: rf_hp34401a
+driver_version: '26.07'
+execution_mode: REAL_HARDWARE
+hil_enabled: false
+instrument:
+  expected_manufacturer: HP|Agilent|Keysight
+  expected_model: 34401A
+  serial_number: UNKNOWN
+  firmware_version: UNKNOWN
+transport:
+  kind: VISA
+  visa_resource: UNKNOWN
+  visa_library: UNKNOWN
+  exclusive_lock_required: true
+fixture:
+  fixture_id: UNKNOWN
+  description: UNKNOWN
+  approved_by: UNKNOWN
+  calibration_prerequisites: UNKNOWN
+allowed_profiles:
+  dc_voltage: false
+  ac_voltage: false
+  current: false
+  resistance: false
+  frequency: false
+  diode_continuity: false
+  bus_trigger: false
+  self_test: false
+  reset: false
+  raw_io: false
+  serial: false
+safety:
+  startup_state: passive measurement input only
+  shutdown_state: disconnect driver session; DMM input remains passive
+  prohibited_operations:
+    - current measurement without a fused series fixture
+    - resistance, continuity, or diode measurement on an energized DUT
+    - reset or self-test during an active production sequence
+    - unrestricted calibration commands
+  emergency_action: disconnect DUT from the DMM using the bench-owned isolation mechanism
+limits:
+  dc_voltage_range_v: 10
+  ac_voltage_range_v: 10
+  current_range_a: 1
+  resistance_range_ohm: 10000
+  stable_expected_ohm: 1000
+  stable_min_ohm: 900
+  stable_max_ohm: 1100
+evidence:
+  output_root: results/real_hardware_all_api/rf_hp34401a
+  require_device_identity: true
+  require_zero_exclusions_for_full_scope: true
+  required_files:
+    - output.xml
+    - log.html
+    - report.html
+    - real_hardware_api_coverage.json
+    - real_hardware_api_coverage.csv
+    - real_hardware_api_summary.md
+    - environment.json
+    - device_identity.json

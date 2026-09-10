@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema", "driver", "source", "identity", "features", "resources", "capabilities", "validation", "extensions"],
+  "properties": {
+    "schema": {"type": "object"},
+    "driver": {"type": "object"},
+    "source": {"type": "object"},
+    "identity": {"type": "object"},
+    "features": {"type": "object"},
+    "resources": {"type": "array"},
+    "capabilities": {"type": "array"},
+    "validation": {"type": "object"},
+    "extensions": {"type": "object"}
+  }
+}

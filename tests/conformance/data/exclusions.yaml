@@ -1,0 +1,15 @@
+rfds019_version: "1.1"
+profile: approved_fake_transport
+exclusions:
+  - id: HIL-VISA-001
+    scope: real_device_protocol_confirmation
+    status: SKIP
+    reason: No physical HP/Agilent/Keysight 34401A and vendor VISA runtime were available in the build environment.
+    alternative_evidence: All VISA-facing public calls are executed through Robot Framework against a factory-injected FakeTransport at the SCPI boundary.
+    approval_required_before_production: true
+  - id: HIL-SERIAL-001
+    scope: real_device_rs232_confirmation
+    status: SKIP
+    reason: No physical 34401A RS-232 connection was available in the build environment.
+    alternative_evidence: Serial connection, remote-mode, identity, command, response, and local-on-close protocol operations are verified through a serial-classified FakeTransport.
+    approval_required_before_production: true

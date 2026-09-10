@@ -1,0 +1,3 @@
+robotframework>=7,<8
+scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@main
+jsonschema>=4.20,<5

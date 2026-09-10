@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "plugin_id": "rf_hp34401a",
+  "display_name": "HP/Agilent/Keysight 34401A DMM",
+  "provider": "rf_hp34401a.plugin:Hp34401APluginProvider",
+  "library": "rf_hp34401a.Hp34401ALibrary",
+  "driver_version": "26.07",
+  "plugin_api_version": "1.0",
+  "supported_models": ["34401A"],
+  "supported_transports": ["VISA_GPIB", "SERIAL_RS232", "FAKE"],
+  "capability_model": "capability/capability_model.yaml",
+  "configuration_schema": "config/schema.json",
+  "ai_contract": "ai/hp34401a_ai_contract.yaml",
+  "protocol_vectors": "tests/conformance/data/protocol_vectors.yaml",
+  "hardware_discovery": false,
+  "creates_connected_instance": false
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rfds.local/schemas/rf_hp34401a/event.schema.json",
+  "title": "rfds.event",
+  "description": "One line of events/events.jsonl. RFDS-008 §15.2 common event envelope.",
+  "type": "object",
+  "required": [
+    "schema", "schema_version", "run_id", "producer_id", "sequence",
+    "timestamp_utc", "monotonic_ns", "level", "event_type", "source", "message", "data"
+  ],
+  "properties": {
+    "schema": {"const": "rfds.event"},
+    "schema_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "run_id": {"type": "string"},
+    "producer_id": {"type": "string"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "timestamp_utc": {"type": "string", "format": "date-time"},
+    "monotonic_ns": {"type": "integer"},
+    "level": {"enum": ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]},
+    "event_type": {"type": "string"},
+    "correlation_id": {"type": ["string", "null"]},
+    "operation_id": {"type": ["string", "null"]},
+    "source": {
+      "type": "object",
+      "required": ["component", "driver_id"],
+      "properties": {
+        "component": {"type": "string"},
+        "driver_id": {"type": "string"},
+        "session_alias": {"type": ["string", "null"]},
+        "suite_id": {"type": ["string", "null"]},
+        "test_id": {"type": ["string", "null"]},
+        "robot_keyword": {"type": ["string", "null"]}
+      }
+    },
+    "message": {"type": "string"},
+    "data": {"type": "object"}
+  },
+  "additionalProperties": false
+}

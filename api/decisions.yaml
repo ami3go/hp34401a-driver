@@ -1,0 +1,11 @@
+decisions:
+- id: HP34401A-DEC-001
+  subject: RFDS-002/RFDS-013 Get Driver Capabilities return conflict
+  choice: RFDS-002 canonical list[str] retained; full RFDS-013 model exposed by Get
+    Driver Capability Model.
+  justification: RFDS-002 owns canonical public signatures.
+- id: HP34401A-DEC-002
+  subject: Safe shutdown capability
+  choice: Not applicable
+  justification: The DMM creates no persistent hazardous output; Disconnect releases
+    communication only.

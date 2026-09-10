@@ -1,0 +1,43 @@
+schema_version: "1.0"
+driver: rf_hp34401a
+release: "26.06"
+examples:
+  - id: "01"
+    file: 01_identify_and_health.robot
+    mode: simulation
+  - id: "02"
+    file: 02_dc_voltage_limits.robot
+    mode: simulation
+  - id: "03"
+    file: 03_ac_voltage.robot
+    mode: simulation
+  - id: "04"
+    file: 04_dc_current.robot
+    mode: simulation
+  - id: "05"
+    file: 05_two_wire_resistance.robot
+    mode: simulation
+  - id: "06"
+    file: 06_four_wire_resistance.robot
+    mode: simulation
+  - id: "07"
+    file: 07_stable_resistance.robot
+    mode: simulation
+  - id: "08"
+    file: 08_frequency_and_period.robot
+    mode: simulation
+  - id: "09"
+    file: 09_bus_trigger.robot
+    mode: simulation
+  - id: "10"
+    file: 10_error_queue_and_recovery.robot
+    mode: simulation
+  - id: "11"
+    file: 11_rs232_connection.robot
+    mode: hardware
+  - id: "12"
+    file: 12_visa_gpib_connection.robot
+    mode: hardware
+  - id: "13"
+    file: 13_canonical_lifecycle_capability_configuration.robot
+    mode: simulation

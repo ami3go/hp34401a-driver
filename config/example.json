@@ -1,0 +1,47 @@
+{
+  "driver": {
+    "driver_name": "rf_hp34401a",
+    "maximum_driver_version_exclusive": "27.0",
+    "minimum_driver_version": "26.4",
+    "supported_models": ["34401A"]
+  },
+  "extensions": {},
+  "metadata": {
+    "created_utc": "2026-07-30T00:00:00Z",
+    "exported_by_driver_version": "26.07",
+    "migration_history": []
+  },
+  "profile": {
+    "description": "Example only; set transport.resource explicitly for the target bench or pass resource to Connect.",
+    "name": "laboratory_example",
+    "scope": "PROJECT"
+  },
+  "rfds014_version": "1.0",
+  "schema_id": "rf_hp34401a.configuration",
+  "schema_version": "1.0.0",
+  "settings": {
+    "device": {"expected_model": "34401A", "expected_terminal": "ANY"},
+    "logging": {"raw_traffic": false},
+    "retry": {"max_query_retries": 1, "query_enabled": true, "write_enabled": false},
+    "safety": {"allow_calibration_commands": false, "allow_raw_scpi": false},
+    "simulation": {
+      "enabled": false,
+      "identity": "HEWLETT-PACKARD,34401A,SIM0001,11-05-01",
+      "reading": 12.0
+    },
+    "timeouts": {
+      "communication_s": 10.0,
+      "long_measurement_s": 60.0,
+      "self_test_s": 30.0
+    },
+    "transport": {
+      "baud_rate": 9600,
+      "data_bits": 8,
+      "kind": "AUTO",
+      "parity": "none",
+      "resource": null,
+      "stop_bits": 2,
+      "visa_library": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "release": "26.07",
+  "status": "REMEDIATION_CANDIDATE",
+  "python": ["3.10", "3.11", "3.12", "3.13"],
+  "robot_framework": ["7.x"],
+  "operating_systems": ["Windows 11", "Linux"],
+  "required_dependencies": {
+    "robotframework": ">=7,<8",
+    "rfds-core": ">=1.0,<2.0",
+    "jsonschema": ">=4.20,<5"
+  },
+  "optional_dependencies": {
+    "pyvisa": ">=1.14 for VISA/GPIB hardware",
+    "pyserial": ">=3.5 for RS-232 hardware"
+  },
+  "transports": {
+    "simulation": "software regression coverage present; final current CI rerun required",
+    "VISA_GPIB": "implementation and prior physical observations exist; exact-remediation-commit HIL pending",
+    "SERIAL_RS232": "implementation present; exact-remediation-commit HIL pending"
+  },
+  "models": {
+    "34401A": "supported identity/model family; final representative real-device HIL pending"
+  },
+  "plugin": {
+    "entry_point": "rf_hp34401a.plugin:Hp34401APluginProvider",
+    "installed_wheel_resource_validation": "PENDING_CURRENT_CI_RERUN"
+  },
+  "limitations": [
+    "D2/P1 hardware qualification is not claimed",
+    "Full RFDS-003 conformance is blocked by authoritative BaseInstrumentLibrary integration",
+    "RFDS-004 v2 canonical transport migration remains an open reviewed deviation",
+    "Vendor VISA backend differences require site validation",
+    "RS-232 wiring/front-panel configuration require site validation"
+  ]
+}

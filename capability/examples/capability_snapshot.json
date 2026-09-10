@@ -1,0 +1,11 @@
+{
+  "schema": {"name": "rfds-capability-model", "version": "1.0"},
+  "driver": {"id": "rf_hp34401a", "version": "26.06"},
+  "source": {"discovery_mode": "static", "connected": false, "stale": false},
+  "identity": {"manufacturer": "UNKNOWN", "model": "UNKNOWN", "serial_number": "UNKNOWN", "firmware_version": "UNKNOWN"},
+  "features": {"multi_session": true, "simulation": true},
+  "resources": [],
+  "capabilities": ["connection.session.open", "measure.voltage.dc"],
+  "validation": {"valid": true},
+  "extensions": {}
+}

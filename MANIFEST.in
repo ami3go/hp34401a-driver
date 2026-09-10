@@ -1,0 +1,17 @@
+include README.md LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md AGENTS.md mkdocs.yml
+recursive-include ai *.yaml *.lock *.json
+recursive-include api *.yaml *.json *.md
+recursive-include capability *.yaml *.json *.robot *.md
+recursive-include config *.json *.lock *.md
+recursive-include docs *.md *.html
+recursive-include guide *.md
+recursive-include examples *.robot *.yaml *.md
+recursive-include scripts *.bat *.ps1 *.sh *.py
+recursive-include history *.md
+recursive-include review *.md *.json *.csv *.log
+recursive-include release *.yaml *.json *.csv *.sha256 *.md
+recursive-include generated/libdoc *.html *.xml *.md
+recursive-include tests *.robot *.resource *.yaml *.json *.py *.csv *.md
+recursive-include hp34401a_dmm *.py py.typed
+recursive-include hp34401a_gui *.py
+recursive-include rf_hp34401a *.py *.json *.lock

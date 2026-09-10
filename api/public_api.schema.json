@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "api_spec",
+    "library",
+    "concurrency",
+    "simulation",
+    "raw_io",
+    "capabilities",
+    "capabilities_not_applicable",
+    "schemas",
+    "error_codes",
+    "keywords"
+  ],
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "minItems": 1
+    },
+    "capabilities": {
+      "type": "array"
+    }
+  }
+}

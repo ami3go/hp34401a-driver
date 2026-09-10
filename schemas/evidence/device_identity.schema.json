@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rfds.local/schemas/rf_hp34401a/device_identity.schema.json",
+  "title": "rfds.device_identity",
+  "description": "device_identity.json — one entry per connected DMM alias, recorded when that alias's session is registered.",
+  "type": "object",
+  "required": ["schema", "schema_version", "run_id", "timestamp_utc", "sessions"],
+  "properties": {
+    "schema": {"const": "rfds.device_identity"},
+    "schema_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "run_id": {"type": "string"},
+    "timestamp_utc": {"type": "string", "format": "date-time"},
+    "sessions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "manufacturer": {"type": ["string", "null"]},
+          "model": {"type": ["string", "null"]},
+          "serial_number": {"type": ["string", "null"]},
+          "firmware_version": {"type": ["string", "null"]},
+          "transport": {"type": ["string", "null"]},
+          "resource": {"type": ["string", "null"]}
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

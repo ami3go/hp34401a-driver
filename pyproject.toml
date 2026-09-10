@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rf-hp34401a"
+version = "26.7.0"
+description = "Robot Framework library for the HP/Agilent/Keysight 34401A DMM"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Robot Framework Driver Project"}]
+keywords = ["Robot Framework", "34401A", "DMM", "SCPI", "GPIB", "RS-232"]
+dependencies = [
+  "robotframework>=7,<8",
+  # scpi-driver-core has no PyPI release yet (pre-1.0, private repo); this
+  # pins to the main branch of the private source repo. Installing this
+  # driver requires git access to ami3go/scpi-driver-core. See
+  # docs/scpi_driver_core_review.md.
+  "scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@main",
+  "jsonschema>=4.20,<5",
+]
+
+[project.optional-dependencies]
+visa = ["pyvisa>=1.14"]
+serial = ["pyserial>=3.5"]
+hardware = ["pyvisa>=1.14", "pyserial>=3.5"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.5", "black>=24", "mypy>=1.10", "build>=1.2", "mkdocs>=1.6", "pyyaml>=6.0", "types-pyyaml>=6.0"]
+
+[project.entry-points."rfds.drivers"]
+rf_hp34401a = "rf_hp34401a.plugin:Hp34401APluginProvider"
+
+[tool.setuptools]
+packages = ["rf_hp34401a", "hp34401a_dmm", "hp34401a_gui"]
+
+[tool.setuptools.package-data]
+hp34401a_dmm = ["py.typed"]
+rf_hp34401a = ["resources/plugin_manifest.json", "resources/configuration/*.json", "resources/configuration/*.lock"]
+
+[tool.setuptools.data-files]
+"share/rf_hp34401a/ai" = ["ai/hp34401a_ai_contract.yaml", "ai/hp34401a_ai_contract.lock"]
+"share/rf_hp34401a/bench" = ["examples/bench/system_ai_contract.template.yaml"]
+"share/rf_hp34401a/api" = ["api/public_api.yaml"]
+"share/rf_hp34401a/capability" = ["capability/capability_model.yaml"]
+"share/rf_hp34401a/config" = ["config/schema.json", "config/schema.lock", "config/default.json"]
+"share/rf_hp34401a/conformance" = ["tests/conformance/data/protocol_vectors.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/core", "tests/evidence", "tests/plugin"]
+addopts = "-q"
+python_classes = "*Suite"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_ignores = true
+ignore_missing_imports = true
+follow_imports = "skip"

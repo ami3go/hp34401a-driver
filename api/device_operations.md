@@ -1,0 +1,65 @@
+# Device operations
+
+- `Check Communication` — Perform a bounded, non-destructive identity query and return ``True``.
+- `Clear DMM Status` — Execute Clear DMM Status.
+- `Clear Device Errors` — Clear status and drain any remaining device error records.
+- `Close All DMMs` — Execute Close All DMMs.
+- `Close DMM` — Execute Close DMM.
+- `Configure 2 Wire Resistance` — Execute Configure 2 Wire Resistance.
+- `Configure 4 Wire Resistance` — Execute Configure 4 Wire Resistance.
+- `Configure AC Current` — Execute Configure AC Current.
+- `Configure AC Voltage` — Execute Configure AC Voltage.
+- `Configure Continuity` — Execute Configure Continuity.
+- `Configure DC Current` — Execute Configure DC Current.
+- `Configure DC Voltage` — Execute Configure DC Voltage.
+- `Configure Diode` — Execute Configure Diode.
+- `Configure Frequency` — Execute Configure Frequency.
+- `Configure Period` — Execute Configure Period.
+- `Connect` — Establish a session and return the RFDS ``connection_state`` schema.
+- `Connect DMM` — Open a DMM session using AUTO, VISA, or SERIAL transport selection.
+- `Disconnect` — Close one session idempotently and release its transport resources.
+- `Disconnect All` — Close all sessions while continuing cleanup after individual failures.
+- `Disconnect DMM` — Transport-neutral alias for ``Close DMM``.
+- `Fetch DMM Readings` — Execute Fetch DMM Readings.
+- `Get All Device Errors` — Drain the device error queue up to ``max_count`` records.
+- `Get Communication Timeout` — Return the effective timeout for the selected session or driver default.
+- `Get Connection State` — Return the stable RFDS connection-state dictionary.
+- `Get DMM Error Queue` — Execute Get DMM Error Queue.
+- `Get DMM Health` — Execute Get DMM Health.
+- `Get DMM Input Terminal` — Execute Get DMM Input Terminal.
+- `Get Device Error` — Read one device error record.
+- `Get Identity` — Return cached device identity, querying only when requested or unavailable.
+- `Identify DMM` — Execute Identify DMM.
+- `Initiate DMM Measurement` — Execute Initiate DMM Measurement.
+- `Measure 2 Wire Resistance` — Execute Measure 2 Wire Resistance.
+- `Measure 4 Wire Resistance` — Execute Measure 4 Wire Resistance.
+- `Measure AC Current` — Execute Measure AC Current.
+- `Measure AC Voltage` — Execute Measure AC Voltage.
+- `Measure Continuity` — Execute Measure Continuity.
+- `Measure DC Current` — Execute Measure DC Current.
+- `Measure DC Voltage` — Execute Measure DC Voltage.
+- `Measure Diode` — Execute Measure Diode.
+- `Measure Frequency` — Execute Measure Frequency.
+- `Measure Period` — Execute Measure Period.
+- `Open DMM Via Serial` — Open an RS-232 session using the instrument's supported serial settings.
+- `Open DMM Via VISA` — Open a VISA/GPIB session and make ``alias`` active.
+- `Open Simulated DMM` — Open deterministic simulation. This keyword never runs automatically as fallback.
+- `Query DMM Command` — Execute Query DMM Command.
+- `Query Raw Command` — Query guarded raw SCPI after explicit opt-in.
+- `Read DMM` — Execute Read DMM.
+- `Read DMM Error` — Execute Read DMM Error.
+- `Read DMM Once With Bus Trigger` — Execute Read DMM Once With Bus Trigger.
+- `Read Raw Response` — Read one already-pending raw response after explicit opt-in.
+- `Read Stable Resistance` — Return a stable resistance or fail without fabricating a reading.
+- `Recover DMM` — Execute Recover DMM.
+- `Refresh Driver Capabilities` — Re-evaluate capability availability and connected identity.
+- `Require DMM Input Terminal` — Execute Require DMM Input Terminal.
+- `Reset Device` — Perform the 34401A SCPI reset only after this explicit high-risk call.
+- `Run DMM Self Test` — Execute Run DMM Self Test.
+- `Select DMM` — Execute Select DMM.
+- `Send DMM Bus Trigger` — Execute Send DMM Bus Trigger.
+- `Set Communication Timeout` — Set a positive finite session or default communication timeout.
+- `Set DMM Trigger Source` — Execute Set DMM Trigger Source.
+- `Try Read Stable Resistance` — Execute Try Read Stable Resistance.
+- `Write DMM Command` — Execute Write DMM Command.
+- `Write Raw Command` — Write a guarded raw SCPI command after explicit raw-I/O opt-in.

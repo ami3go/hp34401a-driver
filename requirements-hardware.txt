@@ -1,0 +1,3 @@
+-r requirements.txt
+pyvisa>=1.14
+pyserial>=3.5

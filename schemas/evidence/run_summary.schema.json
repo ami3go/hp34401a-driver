@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:rfds:rf_hp34401a:evidence:run-summary:1.0.0",
+  "title": "rfds.run_summary",
+  "description": "RFDS-008 run summary for one rf_hp34401a evidence run. Written once by EvidenceRun.finalize().",
+  "type": "object",
+  "required": [
+    "schema", "schema_version", "run_id", "activity", "driver_id",
+    "start_timestamp_utc", "end_timestamp_utc", "duration_s", "execution_mode",
+    "final_status", "error_count", "warning_count", "dropped_events",
+    "evidence_completeness", "result_root"
+  ],
+  "properties": {
+    "schema": {"const": "rfds.run_summary"},
+    "schema_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "run_id": {"type": "string", "pattern": "^run-"},
+    "activity": {"type": "string"},
+    "driver_id": {"const": "rf_hp34401a"},
+    "start_timestamp_utc": {"type": "string", "format": "date-time"},
+    "end_timestamp_utc": {"type": "string", "format": "date-time"},
+    "duration_s": {"type": "number", "minimum": 0},
+    "execution_mode": {"enum": ["UNKNOWN", "SIMULATION", "REPLAY", "REAL_HARDWARE", "MIXED", "NO_HARDWARE"]},
+    "final_status": {"enum": ["PASS", "FAIL", "ERROR", "SKIP", "EXCLUDED", "ABORTED", "NOT_RUN", "UNKNOWN"]},
+    "error_count": {"type": "integer", "minimum": 0},
+    "warning_count": {"type": "integer", "minimum": 0},
+    "dropped_events": {"type": "integer", "minimum": 0},
+    "evidence_completeness": {
+      "enum": ["COMPLETE", "COMPLETE_WITH_DECLARED_OMISSIONS", "INCOMPLETE", "CORRUPT", "UNVERIFIED"]
+    },
+    "device_identity_reference": {"type": ["string", "null"]},
+    "result_root": {"type": "string"}
+  },
+  "additionalProperties": false
+}

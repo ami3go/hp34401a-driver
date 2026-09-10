@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "from_release": "26.06",
+  "to_release": "26.07",
+  "added": [
+    {
+      "keyword": "Export Diagnostic Bundle",
+      "classification": "ADDITIVE_NON_BREAKING"
+    }
+  ],
+  "removed": [],
+  "changed_signatures": [],
+  "unchanged_count": 108,
+  "current_keyword_count": 109,
+  "classification": "ADDITIVE_NON_BREAKING",
+  "unreleased_remediation_surface_change": false,
+  "notes": [
+    "v26.07 added Export Diagnostic Bundle as the 109th public Robot keyword.",
+    "The 2026-08-16 remediation changes implementation, validation, evidence, packaging, CI and documentation behavior without intentionally changing the reviewed 109-keyword v26.07 names/signatures.",
+    "The effective inherited Robot surface is checked by scripts/validate_ai_contract.py and scripts/validate_call_protocol_conformance.py."
+  ]
+}

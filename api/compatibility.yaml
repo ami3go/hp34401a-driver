@@ -1,0 +1,97 @@
+api_version: 1.1.0
+history:
+- api_version: 1.1.0
+  package_version: '26.04'
+  changes:
+  - type: added_keyword
+    subject: RFDS-002 v1.1 canonical lifecycle, RFDS-013 discovery and RFDS-014 configuration
+    breaking: false
+- api_version: 1.1.0
+  package_version: '26.06'
+  changes:
+  - type: bug_fix
+    subject: Normalize lowercase Robot CLI Boolean variables in the real-hardware
+      all-API suite
+    breaking: false
+- api_version: 1.1.0
+  package_version: '26.07'
+  changes:
+  - type: added_keyword
+    subject: RFDS-008 structured evidence engine and Export Diagnostic Bundle keyword
+    breaking: false
+aliases:
+- alias: Close All DMMs
+  canonical: Disconnect All
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Close DMM
+  canonical: Disconnect
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Connect DMM
+  canonical: Connect
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: DMM Error Queue Should Be Empty
+  canonical: Device Error Queue Should Be Empty
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Disconnect DMM
+  canonical: Disconnect
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Get Active DMM Alias
+  canonical: Get Active Connection
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Get DMM Error Queue
+  canonical: Get All Device Errors
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Get Open DMM Aliases
+  canonical: List Connections
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Identify DMM
+  canonical: Get Identity
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Open DMM Via Serial
+  canonical: Connect
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Open DMM Via VISA
+  canonical: Connect
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Query DMM Command
+  canonical: Query Raw Command
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Read DMM Error
+  canonical: Get Device Error
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Select DMM
+  canonical: Select Connection
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0
+- alias: Write DMM Command
+  canonical: Write Raw Command
+  status: deprecated
+  deprecated_since: 1.1.0
+  remove_not_before: 2.0.0

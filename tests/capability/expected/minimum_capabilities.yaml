@@ -1,0 +1,6 @@
+capabilities:
+  - connection.session.open
+  - connection.session.close
+  - identity.device.read
+  - measure.voltage.dc
+  - measure.resistance.two_wire

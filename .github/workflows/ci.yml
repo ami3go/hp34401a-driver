@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality (${{ matrix.os }}, py${{ matrix.python }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.10', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install source-test dependencies
+        run: >-
+          python -m pip install --upgrade pip
+          "robotframework>=7,<8"
+          "jsonschema>=4.20,<5"
+          "pytest>=8" "pytest-cov>=5" "ruff>=0.5" "black>=24" "mypy>=1.10"
+          "build>=1.2" "mkdocs>=1.6" "pyyaml>=6.0" "types-pyyaml>=6.0"
+      - name: Install scpi-driver-core
+        # scpi-driver-core has no PyPI release yet (private, pre-1.0). This
+        # requires a personal access token with read access to that repo,
+        # stored as the SCPI_CORE_PAT secret. See docs/scpi_driver_core_review.md.
+        env:
+          SCPI_CORE_PAT: ${{ secrets.SCPI_CORE_PAT }}
+        run: >-
+          python -m pip install
+          "scpi-driver-core @ git+https://x-access-token:${SCPI_CORE_PAT}@github.com/ami3go/scpi-driver-core.git@main"
+        shell: bash
+      - name: Install driver
+        run: python -m pip install -e .
+      - name: Validate AI contract
+        run: python scripts/validate_ai_contract.py
+      - name: Validate protocol inventory
+        run: python scripts/validate_call_protocol_conformance.py
+      - name: Validate conformance generator surface
+        run: python scripts/generate_conformance_data.py --check
+      - name: Validate real-HIL source accounting
+        run: python scripts/validate_real_hardware_api_suite.py
+      - name: Validate HIL coverage state
+        run: python scripts/validate_hil_coverage_state.py
+      - name: Python tests and concrete-driver coverage
+        id: pytest
+        continue-on-error: true
+        run: >-
+          python -m pytest
+          --junitxml=results/pytest.xml
+          --cov=rf_hp34401a --cov=hp34401a_dmm
+          --cov-report=xml:results/coverage.xml
+          --cov-fail-under=80
+      - name: Upload Python test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hp34401a-driver-pytest-${{ matrix.os }}-py${{ matrix.python }}-${{ github.sha }}
+          path: |
+            results/pytest.xml
+            results/coverage.xml
+          if-no-files-found: warn
+      - name: Fail when Python tests failed
+        if: steps.pytest.outcome != 'success'
+        run: python -c "raise SystemExit('Python test/coverage gate failed; see uploaded pytest artifact')"
+      - name: Robot tests
+        id: robot
+        continue-on-error: true
+        run: python -m robot --outputdir results/robot tests/robot
+      - name: Upload Robot diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hp34401a-driver-robot-${{ matrix.os }}-py${{ matrix.python }}-${{ github.sha }}
+          path: |
+            results/robot/output.xml
+            results/robot/log.html
+            results/robot/report.html
+          if-no-files-found: warn
+      - name: Fail when Robot tests failed
+        if: steps.robot.outcome != 'success'
+        run: python -c "raise SystemExit('Robot Framework gate failed; see uploaded Robot artifact')"
+      - name: API and conformance suites
+        run: |
+          python -m robot --outputdir results/api tests/api
+          python -m robot --outputdir results/capability tests/capability
+          python -m robot --outputdir results/configuration tests/configuration
+          python -m robot --outputdir results/plugin tests/plugin/plugin_provider.robot
+      - name: Offline examples
+        run: python -m robot --exclude hardware --outputdir results/examples examples
+      - name: Generate Libdoc
+        run: |
+          python -m robot.libdoc rf_hp34401a.Hp34401ALibrary generated/libdoc/Hp34401ALibrary.html
+          python -m robot.libdoc rf_hp34401a.Hp34401ALibrary generated/libdoc/Hp34401ALibrary.xml
+      - name: Build documentation
+        run: python -m mkdocs build --strict
+      - name: Build wheel and sdist
+        run: python -m build
+      - name: Validate installed wheel artifact resolution
+        run: python scripts/validate_installed_wheel.py

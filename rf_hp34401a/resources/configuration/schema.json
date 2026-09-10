@@ -1,0 +1,228 @@
+{
+  "$id": "https://rfds.example/schema/rf_hp34401a.configuration-1.0.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "driver": {
+      "additionalProperties": false,
+      "properties": {
+        "driver_name": {
+          "const": "rf_hp34401a"
+        },
+        "maximum_driver_version_exclusive": {
+          "type": "string"
+        },
+        "minimum_driver_version": {
+          "type": "string"
+        },
+        "supported_models": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "driver_name"
+      ],
+      "type": "object"
+    },
+    "extensions": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "profile": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "PACKAGE",
+            "PROJECT",
+            "USER",
+            "SYSTEM",
+            "SESSION",
+            "EXPORTED"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "rfds014_version": {
+      "const": "1.0"
+    },
+    "schema_id": {
+      "const": "rf_hp34401a.configuration"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "additionalProperties": false,
+          "properties": {
+            "expected_model": {
+              "const": "34401A"
+            },
+            "expected_terminal": {
+              "enum": [
+                "FRONT",
+                "REAR",
+                "ANY"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "logging": {
+          "additionalProperties": false,
+          "properties": {
+            "raw_traffic": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "retry": {
+          "additionalProperties": false,
+          "properties": {
+            "max_query_retries": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "query_enabled": {
+              "type": "boolean"
+            },
+            "write_enabled": {
+              "const": false
+            }
+          },
+          "type": "object"
+        },
+        "safety": {
+          "additionalProperties": false,
+          "properties": {
+            "allow_calibration_commands": {
+              "type": "boolean"
+            },
+            "allow_raw_scpi": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "simulation": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "identity": {
+              "type": "string"
+            },
+            "reading": {
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "timeouts": {
+          "additionalProperties": false,
+          "properties": {
+            "communication_s": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            "long_measurement_s": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            "self_test_s": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "transport": {
+          "additionalProperties": false,
+          "properties": {
+            "baud_rate": {
+              "type": "integer"
+            },
+            "data_bits": {
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "AUTO",
+                "VISA",
+                "SERIAL",
+                "FAKE"
+              ]
+            },
+            "parity": {
+              "enum": [
+                "none",
+                "even",
+                "odd"
+              ]
+            },
+            "resource": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stop_bits": {
+              "type": "integer"
+            },
+            "visa_library": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "transport",
+        "timeouts",
+        "retry",
+        "logging",
+        "simulation",
+        "safety",
+        "device"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "rfds014_version",
+    "schema_id",
+    "schema_version",
+    "driver",
+    "profile",
+    "settings"
+  ],
+  "title": "rf_hp34401a driver configuration",
+  "type": "object"
+}

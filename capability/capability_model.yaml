@@ -1,0 +1,172 @@
+schema:
+  name: rfds-capability-model
+  version: "1.0"
+driver:
+  id: rf_hp34401a
+  name: HP/Agilent/Keysight 34401A Robot Framework Driver
+  version: "26.07"
+  api_version: "1.1"
+  capability_model_version: "1.0"
+source:
+  discovery_mode: static
+  generated_at: STATIC
+  connected: false
+  stale: false
+identity:
+  manufacturer: UNKNOWN
+  model: UNKNOWN
+  serial_number: UNKNOWN
+  firmware_version: UNKNOWN
+features:
+  measurement_functions: [VOLT_DC, VOLT_AC, CURR_DC, CURR_AC, RES_2W, RES_4W, FREQ, PERIOD, CONTINUITY, DIODE]
+  multi_session: true
+  simulation: true
+  raw_scpi_guarded: true
+resources:
+  - resource_id: dmm.acquisition
+    access: exclusive_operation
+capabilities:
+  - capability_id: connection.session.open
+    binding: {robot_keyword: Connect}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: connection.session.close
+    binding: {robot_keyword: Disconnect}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: true}
+  - capability_id: connection.session.inspect
+    binding: {robot_keyword: Get Connection State}
+    support_state: supported
+    risk: none
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: true}
+  - capability_id: identity.device.read
+    binding: {robot_keyword: Get Identity}
+    support_state: supported
+    risk: none
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: true}
+  - capability_id: system.communication.check
+    binding: {robot_keyword: Check Communication}
+    support_state: supported
+    risk: none
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: true}
+  - capability_id: system.error.read
+    binding: {robot_keyword: Get Device Error}
+    support_state: supported
+    risk: none
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: true}
+  - capability_id: system.error.clear
+    binding: {robot_keyword: Clear Device Errors}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: system.self_test.execute
+    binding: {robot_keyword: Run DMM Self Test}
+    support_state: supported
+    risk: medium
+    timing: {timeout_s: 30.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.voltage.dc
+    binding: {robot_keyword: Measure DC Voltage}
+    support_state: supported
+    risk: low
+    unit: V
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.voltage.ac
+    binding: {robot_keyword: Measure AC Voltage}
+    support_state: supported
+    risk: low
+    unit: V
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.current.dc
+    binding: {robot_keyword: Measure DC Current}
+    support_state: supported
+    risk: low
+    unit: A
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.current.ac
+    binding: {robot_keyword: Measure AC Current}
+    support_state: supported
+    risk: low
+    unit: A
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.resistance.two_wire
+    binding: {robot_keyword: Measure 2 Wire Resistance}
+    support_state: supported
+    risk: low
+    unit: ohm
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.resistance.four_wire
+    binding: {robot_keyword: Measure 4 Wire Resistance}
+    support_state: supported
+    risk: low
+    unit: ohm
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.frequency
+    binding: {robot_keyword: Measure Frequency}
+    support_state: supported
+    risk: low
+    unit: Hz
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.period
+    binding: {robot_keyword: Measure Period}
+    support_state: supported
+    risk: low
+    unit: s
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.continuity
+    binding: {robot_keyword: Measure Continuity}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.diode
+    binding: {robot_keyword: Measure Diode}
+    support_state: supported
+    risk: low
+    unit: V
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: measure.resistance.stable
+    binding: {robot_keyword: Read Stable Resistance}
+    support_state: supported
+    risk: low
+    unit: ohm
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: acquisition.trigger.configure
+    binding: {robot_keyword: Set DMM Trigger Source}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: acquisition.trigger.initiate
+    binding: {robot_keyword: Initiate DMM Measurement}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 60.0, cancellable: false, retry_safe: false}
+  - capability_id: acquisition.trigger.bus
+    binding: {robot_keyword: Send DMM Bus Trigger}
+    support_state: supported
+    risk: low
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: protocol.scpi.raw_write
+    binding: {robot_keyword: Write DMM Command}
+    support_state: supported
+    risk: high
+    explicit_opt_in: true
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: protocol.scpi.raw_query
+    binding: {robot_keyword: Query DMM Command}
+    support_state: supported
+    risk: medium
+    explicit_opt_in: true
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+  - capability_id: simulation.instrument.open
+    binding: {robot_keyword: Open Simulated DMM}
+    support_state: supported
+    risk: none
+    timing: {timeout_s: 10.0, cancellable: false, retry_safe: false}
+validation:
+  valid: true
+  errors: []
+  warnings: []
+extensions:
+  rf_hp34401a:
+    supported_models: [34401A]

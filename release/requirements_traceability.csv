@@ -1,0 +1,21 @@
+requirement_id,result,implementation,verification,evidence,deviation_id
+RFDS-001-CLS-001,PASS_D0,release/release_manifest.yaml,release class D0 and prohibited claims declared,review/requirement_traceability.md,
+RFDS-001-HIL,PENDING,tests/hil/verify_all_public_api_real_hardware.robot,exact-commit physical execution,results/real_hardware_all_api,HP34401A-DEV-003
+RFDS-002-API,STATIC_PASS,rf_hp34401a/library.py; api/public_api.yaml,scripts/validate_ai_contract.py,ai/hp34401a_ai_contract.lock,
+RFDS-002-TIMEOUT,SOFTWARE_PASS,rf_hp34401a/converters.py; hp34401a_dmm/driver.py,tests/unit/test_timeout_regressions.py,active CI diagnostics,
+RFDS-003-DEP,CLOSED,pyproject.toml; requirements.txt; rf_hp34401a/plugin.py,tests/unit/test_rfds_core_packaging.py; runtime version checks,api/deviations.yaml,HP34401A-DEV-001
+RFDS-003-BASE,OPEN,rf_hp34401a/library.py,authoritative BaseInstrumentLibrary contract suite required,review/known_risks.md,HP34401A-DEV-004
+RFDS-003-COVERAGE,PENDING_FINAL_CI,rf_hp34401a/; hp34401a_dmm/,pytest combined coverage >=80,results/coverage.xml,
+RFDS-004-TRANSPORT,OPEN,hp34401a_dmm/legacy_driver.py; transport modules,core/protocol/HIL tests,api/deviations.yaml,HP34401A-DEV-002
+RFDS-005-PKG,PASS_STRUCTURE,project tree; scripts/build_release.py,archive/layout validation,history/v26.07.md; review/v26.07_code_review.md,
+RFDS-007-ERR,SOFTWARE_PASS,rf_hp34401a/exceptions.py; converters; final facade,tests/unit/test_public_assertion_errors.py; failure-path tests,review/requirement_traceability.md,
+RFDS-008-EVIDENCE,SOFTWARE_PASS,hp34401a_dmm/evidence.py,tests/evidence/; scripts/validate_evidence.py,review/v26.07_code_review.md,
+RFDS-009-TESTING,PARTIAL_PASS,tests/; root CI; manual HIL,automated software layers active; physical HIL pending,.github/workflows/rf_hp34401a-ci.yml; rf_hp34401a-hil.yml,HP34401A-DEV-003
+RFDS-013-CAP,STATIC_PASS,capability/; rf_hp34401a/capabilities.py,actual decorated Robot export validation,capability/capability_model.yaml,
+RFDS-014-CFG,SOFTWARE_PASS,config/; rf_hp34401a/configuration.py; runtime_library.py,tests/unit/test_configuration_integrity.py; test_runtime_configuration.py,config/schema.lock,
+RFDS-015-PLUGIN,PENDING_FINAL_CI,rf_hp34401a/plugin.py; plugin_manifest.json,tests/plugin/test_plugin_artifacts.py; scripts/validate_installed_wheel.py,release/compatibility_report.json,
+RFDS-017-AI,STATIC_PASS,ai/hp34401a_ai_contract.yaml,scripts/validate_ai_contract.py,ai/hp34401a_ai_contract.lock,
+RFDS-018-BENCH,TEMPLATE_ONLY,examples/bench/system_ai_contract.template.yaml,bench-site verification required,docs/ai_contract.md,
+RFDS-019-CONFORMANCE,STATIC_PASS_RUNTIME_PENDING,tests/conformance/,scripts/validate_call_protocol_conformance.py; generate_conformance_data.py --check,tests/conformance/data/protocol_vectors.yaml,
+RFDS-019-HIL,PENDING,tests/hil/; .github/workflows/rf_hp34401a-hil.yml,physical bench execution,results/hil,HP34401A-DEV-003
+RELEASE-INTEGRITY,PENDING_FROZEN_BUILD,scripts/build_release.py,exact commit build and checksum/provenance generation,release/provenance.json; release/checksums.sha256,

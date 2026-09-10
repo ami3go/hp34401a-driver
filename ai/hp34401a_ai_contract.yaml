@@ -1,0 +1,6093 @@
+rfds017_version: '3.0'
+identity:
+  driver_name: rf_hp34401a.Hp34401ALibrary
+  driver_version: 26.7.0
+  contract_version: 1.0.0
+  supported_models:
+  - 34401A
+  instrument_class: DMM
+  primary_role: Measures electrical voltage, current, resistance, frequency, period, continuity, and diode response for automated
+    verification.
+  api_version: 1.1.0
+mental_model:
+  physical_object: One HP, Agilent, or Keysight 34401A bench digital multimeter per named alias, connected by VISA/GPIB or
+    RS-232.
+  configuration_persistence: PERSISTS_UNTIL_RESET
+  blocking_behavior: All public keywords are synchronous and blocking; stable resistance may block until max_wait.
+  concurrency:
+    max_parallel_sessions: 1
+    thread_safe: false
+    multiple_named_sessions_supported: true
+    rule: Calls may target multiple aliases sequentially; concurrent calls to one library instance are not qualified.
+  ownership: Each open alias exclusively owns one physical VISA or serial resource until disconnect.
+  measurement_memory: Each alias stores only its latest accepted or rejected MeasurementReading metadata.
+state_machine:
+  scope: PER_ALIAS
+  states:
+  - DISCONNECTED
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  initial_state: DISCONNECTED
+  transitions:
+  - from: DISCONNECTED
+    to: CONNECTED_REMOTE
+    via_capability: Connect DMM
+  - from: CONNECTED_REMOTE
+    to: CONFIGURED
+    via_capability: Configure DC Voltage
+  - from: CONFIGURED
+    to: CONNECTED_REMOTE
+    via_capability: Read DMM
+  - from: CONFIGURED
+    to: WAITING_FOR_TRIGGER
+    via_capability: Initiate DMM Measurement
+  - from: WAITING_FOR_TRIGGER
+    to: HAS_UNREAD_OUTPUT
+    via_capability: Send DMM Bus Trigger
+  - from: HAS_UNREAD_OUTPUT
+    to: CONNECTED_REMOTE
+    via_capability: Fetch DMM Readings
+  - from: ERROR_RECOVERY
+    to: CONNECTED_REMOTE
+    via_capability: Recover DMM
+  - from: CONNECTED_REMOTE
+    to: DISCONNECTED
+    via_capability: Disconnect DMM
+resources:
+  consumes:
+  - name: DMM_SESSION_ALIAS
+    access: EXCLUSIVE
+    description: Named logical ownership of one connected DMM.
+  - name: VISA_RESOURCE
+    access: EXCLUSIVE
+    description: One GPIB, USBTMC, or supported VISA endpoint when VISA transport is selected.
+  - name: SERIAL_PORT
+    access: EXCLUSIVE
+    description: One RS-232 host port when serial transport is selected.
+  - name: DMM_INPUT_TERMINALS
+    access: EXCLUSIVE
+    description: Front or rear measurement terminals and associated fixture path.
+  provides:
+  - name: ELECTRICAL_MEASUREMENT
+    description: Timestamped scalar measurement plus validity, overload, function, unit, range, timing, and recovery metadata.
+  - name: PASS_FAIL_ORACLE
+    description: Robot assertion keywords for range, tolerance, validity, overload, identity, terminal, and error queue.
+  physical_signals:
+    inputs:
+    - name: INPUT_HI
+      signal: ELECTRICAL_MEASUREMENT_INPUT
+      connector: BANANA_FRONT_OR_REAR
+    - name: INPUT_LO
+      signal: ELECTRICAL_RETURN
+      connector: BANANA_FRONT_OR_REAR
+    - name: SENSE_HI
+      signal: FOUR_WIRE_SENSE
+      connector: BANANA_FRONT_OR_REAR
+    - name: SENSE_LO
+      signal: FOUR_WIRE_SENSE_RETURN
+      connector: BANANA_FRONT_OR_REAR
+    outputs:
+    - name: MEASUREMENT_DATA
+      signal: DIGITAL_RESULT
+      connector: ROBOT_FRAMEWORK_RETURN
+dependencies:
+  requires_before: []
+  enables_after:
+  - DUT verdict evaluation
+  - calibration comparison
+  - production report generation
+  conflicts_with:
+  - Any process or driver controlling the same VISA resource, serial port, or DMM terminals.
+connection_points:
+  inputs:
+  - name: INPUT_HI
+    signal: VOLTAGE_CURRENT_RESISTANCE_FREQUENCY
+    connector: BANANA
+  - name: INPUT_LO
+    signal: REFERENCE_RETURN
+    connector: BANANA
+  - name: SENSE_HI
+    signal: FOUR_WIRE_SENSE
+    connector: BANANA
+  - name: SENSE_LO
+    signal: FOUR_WIRE_SENSE_RETURN
+    connector: BANANA
+  outputs: []
+measurement_quality:
+  dc_voltage:
+    preferred_for:
+    - CALIBRATION
+    - PRODUCTION
+    - VERIFICATION
+    confidence: HIGH
+    accuracy_source: MANUFACTURER_SPEC
+  resistance:
+    preferred_for:
+    - CALIBRATION
+    - PRODUCTION
+    - VERIFICATION
+    confidence: HIGH
+    accuracy_source: MANUFACTURER_SPEC
+  ac_voltage:
+    preferred_for:
+    - VERIFICATION
+    confidence: HIGH
+    accuracy_source: MANUFACTURER_SPEC
+  current:
+    preferred_for:
+    - VERIFICATION
+    confidence: HIGH
+    accuracy_source: MANUFACTURER_SPEC
+    safety_note: Requires correct series connection and fused current terminal.
+implementation_status:
+  maturity: D0_DEVELOPMENT_CANDIDATE
+  validation:
+  - UNIT_TESTED_BASELINE
+  - SIMULATOR_COMPONENT_VALIDATED
+  - RFDS019_STATIC_COMPLETE
+  pending:
+  - OFFICIAL_ROBOT_RFDS019_EXECUTION
+  - REAL_HARDWARE_ALL_API_EXECUTION
+  - RFDS_CORE_INTEGRATION
+  - RFDS004_V2_TRANSPORT_MIGRATION
+  - LONG_DURATION_TESTED
+capabilities:
+- keyword: Check Communication
+  signature: Check Communication(alias=${NONE})
+  purpose: Perform a bounded, non-destructive identity query and return ``True``.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: bool
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-001
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Clear DMM Status
+  signature: Clear DMM Status(alias=${NONE})
+  purpose: Execute Clear DMM Status.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-002
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Clear Device Errors
+  signature: Clear Device Errors(alias=${NONE})
+  purpose: Clear status and drain any remaining device error records.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-003
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Close All DMMs
+  signature: Close All DMMs()
+  purpose: Execute Close All DMMs.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments: []
+  returns: []
+  coupling: []
+  side_effects:
+  - closes transport session and releases resources
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-004
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Disconnect All
+- keyword: Close DMM
+  signature: Close DMM(alias=${NONE})
+  purpose: Execute Close DMM.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - closes transport session and releases resources
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-005
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Disconnect
+- keyword: Configure 2 Wire Resistance
+  signature: Configure 2 Wire Resistance(range_value=DEF, nplc=10, autozero=ON, alias=${NONE})
+  purpose: Execute Configure 2 Wire Resistance.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: autozero
+    kind: SCALAR
+    required: false
+    default: 'ON'
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-006
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure 4 Wire Resistance
+  signature: Configure 4 Wire Resistance(range_value=DEF, nplc=10, autozero=ON, alias=${NONE})
+  purpose: Execute Configure 4 Wire Resistance.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: autozero
+    kind: SCALAR
+    required: false
+    default: 'ON'
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-007
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure AC Current
+  signature: Configure AC Current(range_value=DEF, ac_filter_hz=20, alias=${NONE})
+  purpose: Execute Configure AC Current.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: ac_filter_hz
+    kind: SCALAR
+    required: false
+    default: 20
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-008
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure AC Voltage
+  signature: Configure AC Voltage(range_value=DEF, ac_filter_hz=20, alias=${NONE})
+  purpose: Execute Configure AC Voltage.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: ac_filter_hz
+    kind: SCALAR
+    required: false
+    default: 20
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-009
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure Continuity
+  signature: Configure Continuity(alias=${NONE})
+  purpose: Execute Configure Continuity.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-010
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure DC Current
+  signature: Configure DC Current(range_value=DEF, nplc=10, autozero=ON, alias=${NONE})
+  purpose: Execute Configure DC Current.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: autozero
+    kind: SCALAR
+    required: false
+    default: 'ON'
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-011
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure DC Voltage
+  signature: Configure DC Voltage(range_value=DEF, nplc=10, autozero=ON, alias=${NONE})
+  purpose: Execute Configure DC Voltage.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: autozero
+    kind: SCALAR
+    required: false
+    default: 'ON'
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-012
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure Diode
+  signature: Configure Diode(alias=${NONE})
+  purpose: Execute Configure Diode.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-013
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure Frequency
+  signature: Configure Frequency(voltage_range=DEF, aperture=0.1, alias=${NONE})
+  purpose: Execute Configure Frequency.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: voltage_range
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: aperture
+    kind: SCALAR
+    required: false
+    default: 0.1
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-014
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Configure Period
+  signature: Configure Period(voltage_range=DEF, aperture=0.1, alias=${NONE})
+  purpose: Execute Configure Period.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: voltage_range
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: aperture
+    kind: SCALAR
+    required: false
+    default: 0.1
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-015
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Connect
+  signature: Connect(resource=${NONE}, alias=default, timeout_s=${NONE}, **options)
+  purpose: Establish a session and return the RFDS ``connection_state`` schema.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: &id001
+  - DISCONNECTED
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: resource
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: default
+    description: documented by Libdoc and RFDS-017
+  - name: timeout_s
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: options
+    kind: STRUCTURED
+    required: false
+    default: {}
+    description: See public_api.yaml.
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: connection_state
+  coupling: []
+  side_effects:
+  - opens one explicitly selected transport session
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-016
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Connect DMM
+  signature: Connect DMM(resource, transport=AUTO, alias=default, timeout=10 s, visa_library=${NONE}, baud_rate=9600, parity=none,
+    data_bits=8, stop_bits=2, dtr_dsr=${TRUE}, remote_on_connect=${TRUE}, local_on_close=${FALSE}, reset_on_connect=${FALSE},
+    verify_identity=${TRUE}, drain_error_queue=${TRUE}, retry_queries=${TRUE}, max_query_retries=1, allow_calibration_commands=${FALSE},
+    replace=${FALSE}, raw_traffic_log=${FALSE})
+  purpose: Open a DMM session using AUTO, VISA, or SERIAL transport selection.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: resource
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: transport
+    kind: SCALAR
+    required: false
+    default: AUTO
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: default
+    description: documented by Libdoc and RFDS-017
+  - name: timeout
+    kind: SCALAR
+    required: false
+    default: 10 s
+    description: documented by Libdoc and RFDS-017
+  - name: visa_library
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: baud_rate
+    kind: SCALAR
+    required: false
+    default: 9600
+    description: documented by Libdoc and RFDS-017
+  - name: parity
+    kind: SCALAR
+    required: false
+    default: none
+    description: documented by Libdoc and RFDS-017
+  - name: data_bits
+    kind: SCALAR
+    required: false
+    default: 8
+    description: documented by Libdoc and RFDS-017
+  - name: stop_bits
+    kind: SCALAR
+    required: false
+    default: 2
+    description: documented by Libdoc and RFDS-017
+  - name: dtr_dsr
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: remote_on_connect
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: local_on_close
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: reset_on_connect
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: verify_identity
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: drain_error_queue
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: retry_queries
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: max_query_retries
+    kind: SCALAR
+    required: false
+    default: 1
+    description: documented by Libdoc and RFDS-017
+  - name: allow_calibration_commands
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: replace
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: raw_traffic_log
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - opens one explicitly selected transport session
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-017
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Connect
+- keyword: DMM Error Queue Should Be Empty
+  signature: DMM Error Queue Should Be Empty(alias=${NONE})
+  purpose: Execute DMM Error Queue Should Be Empty.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-018
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: deprecated
+  replacement: Device Error Queue Should Be Empty
+- keyword: DMM Model Should Be 34401A
+  signature: DMM Model Should Be 34401A(alias=${NONE})
+  purpose: Execute DMM Model Should Be 34401A.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-019
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Be Between
+  signature: DMM Reading Should Be Between(minimum, maximum, alias=${NONE})
+  purpose: Execute DMM Reading Should Be Between.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: minimum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: maximum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-020
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Be Close To
+  signature: DMM Reading Should Be Close To(expected, absolute_tolerance=0.0, relative_tolerance=0.0, alias=${NONE})
+  purpose: Execute DMM Reading Should Be Close To.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: expected
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: absolute_tolerance
+    kind: SCALAR
+    required: false
+    default: 0.0
+    description: documented by Libdoc and RFDS-017
+  - name: relative_tolerance
+    kind: SCALAR
+    required: false
+    default: 0.0
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-021
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Be Greater Than
+  signature: DMM Reading Should Be Greater Than(minimum, alias=${NONE})
+  purpose: Execute DMM Reading Should Be Greater Than.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: minimum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-022
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Be Less Than
+  signature: DMM Reading Should Be Less Than(maximum, alias=${NONE})
+  purpose: Execute DMM Reading Should Be Less Than.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: maximum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-023
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Be Valid
+  signature: DMM Reading Should Be Valid(alias=${NONE})
+  purpose: Execute DMM Reading Should Be Valid.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-024
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Reading Should Not Be Overload
+  signature: DMM Reading Should Not Be Overload(alias=${NONE})
+  purpose: Execute DMM Reading Should Not Be Overload.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-025
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Self Test Should Pass
+  signature: DMM Self Test Should Pass(alias=${NONE})
+  purpose: Execute DMM Self Test Should Pass.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-026
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Should Be Connected
+  signature: DMM Should Be Connected(alias=${NONE})
+  purpose: Execute DMM Should Be Connected.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-027
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: DMM Should Have No Errors
+  signature: DMM Should Have No Errors(context=, alias=${NONE})
+  purpose: Execute DMM Should Have No Errors.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: context
+    kind: SCALAR
+    required: false
+    default: ''
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-028
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Delete Driver Configuration Profile
+  signature: Delete Driver Configuration Profile(profile_name)
+  purpose: Delete one named host profile; packaged defaults cannot be deleted.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: profile_name
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-029
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Device Error Queue Should Be Empty
+  signature: Device Error Queue Should Be Empty(alias=${NONE})
+  purpose: Fail unless the device error queue reports no error.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-030
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Disconnect
+  signature: Disconnect(alias=${NONE})
+  purpose: Close one session idempotently and release its transport resources.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - closes transport session and releases resources
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-031
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Disconnect All
+  signature: Disconnect All()
+  purpose: Close all sessions while continuing cleanup after individual failures.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments: []
+  returns: []
+  coupling: []
+  side_effects:
+  - closes transport session and releases resources
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-032
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Disconnect DMM
+  signature: Disconnect DMM(alias=${NONE})
+  purpose: Transport-neutral alias for ``Close DMM``.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - closes transport session and releases resources
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-033
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Disconnect
+- keyword: Export Diagnostic Bundle
+  signature: Export Diagnostic Bundle(destination=${NONE})
+  purpose: Zip this library instance's RFDS-008 evidence run for troubleshooting.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: destination
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str | None
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - writes a .zip archive to disk; does not change driver or DMM state
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-034
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Export Driver Configuration
+  signature: Export Driver Configuration(destination=${NONE}, indent=2)
+  purpose: Export canonical JSON and optionally write it atomically to a path.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: destination
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: indent
+    kind: SCALAR
+    required: false
+    default: 2
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-035
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Fetch DMM Readings
+  signature: Fetch DMM Readings(alias=${NONE})
+  purpose: Execute Fetch DMM Readings.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: list[dict[str, Any]]
+    description: measurement_reading
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-036
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Find Driver Capabilities
+  signature: Find Driver Capabilities(capability_id=${NONE}, keyword_name=${NONE}, maximum_risk=${NONE}, available_only=${FALSE},
+    mode=effective)
+  purpose: Find capabilities using structured filters.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: capability_id
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: keyword_name
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: maximum_risk
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: available_only
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: mode
+    kind: SCALAR
+    required: false
+    default: effective
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: list[dict[str, Any]]
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-037
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Active Connection
+  signature: Get Active Connection()
+  purpose: Return the active alias or ``None`` when no session exists.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: str | None
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-038
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Active DMM Alias
+  signature: Get Active DMM Alias()
+  purpose: Execute Get Active DMM Alias.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: str | None
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-039
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: deprecated
+  replacement: Get Active Connection
+- keyword: Get All Device Errors
+  signature: Get All Device Errors(max_count=25, alias=${NONE})
+  purpose: Drain the device error queue up to ``max_count`` records.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: max_count
+    kind: SCALAR
+    required: false
+    default: 25
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: list[dict[str, Any]]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-040
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Communication Timeout
+  signature: Get Communication Timeout(alias=${NONE})
+  purpose: Return the effective timeout for the selected session or driver default.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-041
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Connection State
+  signature: Get Connection State(alias=${NONE}, refresh=${FALSE})
+  purpose: Return the stable RFDS connection-state dictionary.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: refresh
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: connection_state
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-042
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get DMM Driver Version
+  signature: Get DMM Driver Version()
+  purpose: Execute Get DMM Driver Version.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-043
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get DMM Error Queue
+  signature: Get DMM Error Queue(max_errors=25, alias=${NONE})
+  purpose: Execute Get DMM Error Queue.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: max_errors
+    kind: SCALAR
+    required: false
+    default: 25
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: list[dict[str, Any]]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-044
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: deprecated
+  replacement: Get All Device Errors
+- keyword: Get DMM Health
+  signature: Get DMM Health(alias=${NONE})
+  purpose: Execute Get DMM Health.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-045
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get DMM Input Terminal
+  signature: Get DMM Input Terminal(alias=${NONE})
+  purpose: Execute Get DMM Input Terminal.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-046
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get DMM State
+  signature: Get DMM State(alias=${NONE})
+  purpose: Execute Get DMM State.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-047
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Device Error
+  signature: Get Device Error(alias=${NONE})
+  purpose: Read one device error record.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-048
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Capabilities
+  signature: Get Driver Capabilities()
+  purpose: Return the sorted RFDS-002 capability identifiers without device I/O.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: list[str]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-049
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Capability
+  signature: Get Driver Capability(capability_id, mode=effective)
+  purpose: Return one capability by exact stable capability identifier.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: capability_id
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: mode
+    kind: SCALAR
+    required: false
+    default: effective
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-050
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Capability Model
+  signature: Get Driver Capability Model(mode=effective)
+  purpose: Return the full RFDS-013 capability model.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: mode
+    kind: SCALAR
+    required: false
+    default: effective
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-051
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Configuration
+  signature: Get Driver Configuration(scope=EFFECTIVE, alias=${NONE}, redact_sensitive=${TRUE}, include_sources=${FALSE})
+  purpose: Return current host-side configuration; no device state is changed.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: scope
+    kind: SCALAR
+    required: false
+    default: EFFECTIVE
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: redact_sensitive
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: include_sources
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-052
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Configuration Schema
+  signature: Get Driver Configuration Schema()
+  purpose: Return the canonical RFDS-014 JSON Schema without device I/O.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-053
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Default Configuration
+  signature: Get Driver Default Configuration()
+  purpose: Return a copy of the safe package default configuration.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-054
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Features
+  signature: Get Driver Features(mode=effective)
+  purpose: Return normalized feature information from the capability model.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: mode
+    kind: SCALAR
+    required: false
+    default: effective
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-055
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Information
+  signature: Get Driver Information()
+  purpose: Return connection-independent driver identity and compatibility metadata.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-056
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Driver Metadata
+  signature: Get Driver Metadata(alias=${NONE})
+  purpose: Return driver, runtime, transport, and connected-instrument metadata.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-057
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Identity
+  signature: Get Identity(alias=${NONE}, refresh=${FALSE})
+  purpose: Return cached device identity, querying only when requested or unavailable.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: refresh
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-058
+  tags:
+  - rfds:identity
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Last DMM Reading
+  signature: Get Last DMM Reading(alias=${NONE})
+  purpose: Execute Get Last DMM Reading.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: measurement_reading
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-059
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Last DMM Reading Value
+  signature: Get Last DMM Reading Value(alias=${NONE})
+  purpose: Execute Get Last DMM Reading Value.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: measurement_reading
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-060
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Get Open DMM Aliases
+  signature: Get Open DMM Aliases()
+  purpose: Execute Get Open DMM Aliases.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: list[str]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-061
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: deprecated
+  replacement: List Connections
+- keyword: Get Robot DMM Library Version
+  signature: Get Robot DMM Library Version()
+  purpose: Execute Get Robot DMM Library Version.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-062
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Identify DMM
+  signature: Identify DMM(alias=${NONE})
+  purpose: Execute Identify DMM.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-063
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: deprecated
+  replacement: Get Identity
+- keyword: Import Driver Configuration
+  signature: Import Driver Configuration(source, validate_only=${FALSE}, strict=${TRUE})
+  purpose: Import JSON from a mapping, JSON string, or file path transactionally.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: source
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: validate_only
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: strict
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-064
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Initiate DMM Measurement
+  signature: Initiate DMM Measurement(alias=${NONE})
+  purpose: Execute Initiate DMM Measurement.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-065
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Is Connected
+  signature: Is Connected(alias=${NONE})
+  purpose: Return cached connection state without raising for an unknown alias.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: bool
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-066
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: List Connections
+  signature: List Connections()
+  purpose: Return one connection-state dictionary per open alias.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: list[dict[str, Any]]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-067
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: List Driver Configuration Profiles
+  signature: List Driver Configuration Profiles()
+  purpose: List explicitly persisted user profile names.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: list[str]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-068
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: List VISA Resources
+  signature: List VISA Resources(visa_library=${NONE})
+  purpose: Execute List VISA Resources.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: visa_library
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: list[str]
+    description: Robot-compatible result
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-069
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Load Driver Configuration
+  signature: Load Driver Configuration(profile_name, validate_only=${FALSE})
+  purpose: Load a named user profile and optionally validate without applying.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: profile_name
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: validate_only
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-070
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure 2 Wire Resistance
+  signature: Measure 2 Wire Resistance(range_value=DEF, nplc=10, alias=${NONE})
+  purpose: Execute Measure 2 Wire Resistance.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-071
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure 4 Wire Resistance
+  signature: Measure 4 Wire Resistance(range_value=DEF, nplc=10, alias=${NONE})
+  purpose: Execute Measure 4 Wire Resistance.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-072
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure AC Current
+  signature: Measure AC Current(range_value=DEF, ac_filter_hz=20, alias=${NONE})
+  purpose: Execute Measure AC Current.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: ac_filter_hz
+    kind: SCALAR
+    required: false
+    default: 20
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-073
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure AC Voltage
+  signature: Measure AC Voltage(range_value=DEF, ac_filter_hz=20, alias=${NONE})
+  purpose: Execute Measure AC Voltage.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: ac_filter_hz
+    kind: SCALAR
+    required: false
+    default: 20
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-074
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure Continuity
+  signature: Measure Continuity(alias=${NONE})
+  purpose: Execute Measure Continuity.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-075
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure DC Current
+  signature: Measure DC Current(range_value=DEF, nplc=10, alias=${NONE})
+  purpose: Execute Measure DC Current.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-076
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure DC Voltage
+  signature: Measure DC Voltage(range_value=DEF, nplc=10, alias=${NONE})
+  purpose: Execute Measure DC Voltage.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-077
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure Diode
+  signature: Measure Diode(alias=${NONE})
+  purpose: Execute Measure Diode.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-078
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure Frequency
+  signature: Measure Frequency(voltage_range=DEF, aperture=0.1, alias=${NONE})
+  purpose: Execute Measure Frequency.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: voltage_range
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: aperture
+    kind: SCALAR
+    required: false
+    default: 0.1
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-079
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Measure Period
+  signature: Measure Period(voltage_range=DEF, aperture=0.1, alias=${NONE})
+  purpose: Execute Measure Period.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: voltage_range
+    kind: SCALAR
+    required: false
+    default: DEF
+    description: documented by Libdoc and RFDS-017
+  - name: aperture
+    kind: SCALAR
+    required: false
+    default: 0.1
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-080
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Open DMM Via Serial
+  signature: Open DMM Via Serial(port, alias=default, baud_rate=9600, parity=none, data_bits=8, stop_bits=2, timeout=10 s,
+    dtr_dsr=${TRUE}, remote_on_connect=${TRUE}, local_on_close=${FALSE}, verify_identity=${TRUE}, retry_queries=${TRUE}, max_query_retries=1,
+    allow_calibration_commands=${FALSE}, replace=${FALSE}, raw_traffic_log=${FALSE})
+  purpose: Open an RS-232 session using the instrument's supported serial settings.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: port
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: default
+    description: documented by Libdoc and RFDS-017
+  - name: baud_rate
+    kind: SCALAR
+    required: false
+    default: 9600
+    description: documented by Libdoc and RFDS-017
+  - name: parity
+    kind: SCALAR
+    required: false
+    default: none
+    description: documented by Libdoc and RFDS-017
+  - name: data_bits
+    kind: SCALAR
+    required: false
+    default: 8
+    description: documented by Libdoc and RFDS-017
+  - name: stop_bits
+    kind: SCALAR
+    required: false
+    default: 2
+    description: documented by Libdoc and RFDS-017
+  - name: timeout
+    kind: SCALAR
+    required: false
+    default: 10 s
+    description: documented by Libdoc and RFDS-017
+  - name: dtr_dsr
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: remote_on_connect
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: local_on_close
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: verify_identity
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: retry_queries
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: max_query_retries
+    kind: SCALAR
+    required: false
+    default: 1
+    description: documented by Libdoc and RFDS-017
+  - name: allow_calibration_commands
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: replace
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: raw_traffic_log
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - opens one explicitly selected transport session
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-081
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Connect
+- keyword: Open DMM Via VISA
+  signature: Open DMM Via VISA(resource, alias=default, timeout=10 s, visa_library=${NONE}, reset_on_connect=${FALSE}, verify_identity=${TRUE},
+    drain_error_queue=${TRUE}, retry_queries=${TRUE}, max_query_retries=1, allow_calibration_commands=${FALSE}, replace=${FALSE},
+    raw_traffic_log=${FALSE})
+  purpose: Open a VISA/GPIB session and make ``alias`` active.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: resource
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: default
+    description: documented by Libdoc and RFDS-017
+  - name: timeout
+    kind: SCALAR
+    required: false
+    default: 10 s
+    description: documented by Libdoc and RFDS-017
+  - name: visa_library
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: reset_on_connect
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: verify_identity
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: drain_error_queue
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: retry_queries
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: max_query_retries
+    kind: SCALAR
+    required: false
+    default: 1
+    description: documented by Libdoc and RFDS-017
+  - name: allow_calibration_commands
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: replace
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: raw_traffic_log
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - opens one explicitly selected transport session
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-082
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Connect
+- keyword: Open Simulated DMM
+  signature: Open Simulated DMM(alias=default, reading=12.0, identity=HEWLETT-PACKARD,34401A,SIM0001,11-05-01, terminal=FRONT,
+    replace=${FALSE})
+  purpose: Open deterministic simulation. This keyword never runs automatically as fallback.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: default
+    description: documented by Libdoc and RFDS-017
+  - name: reading
+    kind: SCALAR
+    required: false
+    default: 12.0
+    description: documented by Libdoc and RFDS-017
+  - name: identity
+    kind: SCALAR
+    required: false
+    default: HEWLETT-PACKARD,34401A,SIM0001,11-05-01
+    description: documented by Libdoc and RFDS-017
+  - name: terminal
+    kind: SCALAR
+    required: false
+    default: FRONT
+    description: documented by Libdoc and RFDS-017
+  - name: replace
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - opens one explicitly selected transport session
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-083
+  tags:
+  - rfds:simulation
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Query DMM Command
+  signature: Query DMM Command(command, alias=${NONE})
+  purpose: Execute Query DMM Command.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: command
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-084
+  tags:
+  - rfds:raw_io
+  - rfds:high_risk
+  status: deprecated
+  replacement: Query Raw Command
+- keyword: Query Raw Command
+  signature: Query Raw Command(command, alias=${NONE}, timeout_s=${NONE})
+  purpose: Query guarded raw SCPI after explicit opt-in.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: command
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: timeout_s
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-085
+  tags:
+  - rfds:raw_io
+  - rfds:high_risk
+  status: active
+  replacement: null
+- keyword: Read DMM
+  signature: Read DMM(alias=${NONE})
+  purpose: Execute Read DMM.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-086
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Read DMM Error
+  signature: Read DMM Error(alias=${NONE})
+  purpose: Execute Read DMM Error.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-087
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: deprecated
+  replacement: Get Device Error
+- keyword: Read DMM Once With Bus Trigger
+  signature: Read DMM Once With Bus Trigger(alias=${NONE})
+  purpose: Execute Read DMM Once With Bus Trigger.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-088
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Read Raw Response
+  signature: Read Raw Response(alias=${NONE}, timeout_s=${NONE})
+  purpose: Read one already-pending raw response after explicit opt-in.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: timeout_s
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-089
+  tags:
+  - rfds:raw_io
+  - rfds:high_risk
+  status: active
+  replacement: null
+- keyword: Read Stable Resistance
+  signature: Read Stable Resistance(expected_ohm=${NONE}, range_value=AUTO, nplc=10, final_nplc=100, min_settle=500 ms, max_wait=20
+    s, sample_interval=200 ms, window_size=5, max_stdev_ohm=${NONE}, max_relative_stdev=0.0005, max_slope_relative_per_s=0.0005,
+    four_wire=${FALSE}, alias=${NONE})
+  purpose: Return a stable resistance or fail without fabricating a reading.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: expected_ohm
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: AUTO
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: final_nplc
+    kind: SCALAR
+    required: false
+    default: 100
+    description: documented by Libdoc and RFDS-017
+  - name: min_settle
+    kind: SCALAR
+    required: false
+    default: 500 ms
+    description: documented by Libdoc and RFDS-017
+  - name: max_wait
+    kind: SCALAR
+    required: false
+    default: 20 s
+    description: documented by Libdoc and RFDS-017
+  - name: sample_interval
+    kind: SCALAR
+    required: false
+    default: 200 ms
+    description: documented by Libdoc and RFDS-017
+  - name: window_size
+    kind: SCALAR
+    required: false
+    default: 5
+    description: documented by Libdoc and RFDS-017
+  - name: max_stdev_ohm
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: max_relative_stdev
+    kind: SCALAR
+    required: false
+    default: 0.0005
+    description: documented by Libdoc and RFDS-017
+  - name: max_slope_relative_per_s
+    kind: SCALAR
+    required: false
+    default: 0.0005
+    description: documented by Libdoc and RFDS-017
+  - name: four_wire
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - may trigger one DMM acquisition
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-090
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Recover DMM
+  signature: Recover DMM(alias=${NONE})
+  purpose: Execute Recover DMM.
+  risk_level: MEDIUM
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-091
+  tags:
+  - rfds:diagnostic
+  - rfds:medium_risk
+  status: active
+  replacement: null
+- keyword: Refresh Driver Capabilities
+  signature: Refresh Driver Capabilities(mode=effective)
+  purpose: Re-evaluate capability availability and connected identity.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: mode
+    kind: SCALAR
+    required: false
+    default: effective
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-092
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Require DMM Input Terminal
+  signature: Require DMM Input Terminal(expected, alias=${NONE})
+  purpose: Execute Require DMM Input Terminal.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: expected
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-093
+  tags:
+  - rfds:query
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Reset Device
+  signature: Reset Device(alias=${NONE}, wait_until_ready=${TRUE}, timeout_s=${NONE})
+  purpose: Perform the 34401A SCPI reset only after this explicit high-risk call.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: wait_until_ready
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  - name: timeout_s
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - sends SCPI *RST and clears volatile measurement configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-094
+  tags:
+  - rfds:configuration
+  - rfds:high_risk
+  status: active
+  replacement: null
+- keyword: Reset Driver Configuration
+  signature: Reset Driver Configuration()
+  purpose: Reset runtime host configuration to the safe package default.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-095
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Run DMM Self Test
+  signature: Run DMM Self Test(alias=${NONE})
+  purpose: Execute Run DMM Self Test.
+  risk_level: MEDIUM
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-096
+  tags:
+  - rfds:diagnostic
+  - rfds:medium_risk
+  status: active
+  replacement: null
+- keyword: Save Driver Configuration
+  signature: Save Driver Configuration(profile_name, overwrite=${FALSE})
+  purpose: Persist the current host profile only after explicit authorization.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: profile_name
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: overwrite
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-097
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Select Connection
+  signature: Select Connection(alias)
+  purpose: Select an existing connection and return its state.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: connection_state
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-098
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Select DMM
+  signature: Select DMM(alias)
+  purpose: Execute Select DMM.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: str
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-099
+  tags:
+  - rfds:connection
+  - rfds:low_risk
+  status: deprecated
+  replacement: Select Connection
+- keyword: Send DMM Bus Trigger
+  signature: Send DMM Bus Trigger(alias=${NONE})
+  purpose: Execute Send DMM Bus Trigger.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-100
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Set Communication Timeout
+  signature: Set Communication Timeout(timeout_s, alias=${NONE})
+  purpose: Set a positive finite session or default communication timeout.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: timeout_s
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: float
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-101
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Set DMM Trigger Source
+  signature: Set DMM Trigger Source(source, alias=${NONE})
+  purpose: Execute Set DMM Trigger Source.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: source
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-102
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Set Raw I/O Enabled
+  signature: Set Raw I/O Enabled(enabled)
+  purpose: Explicitly enable or disable guarded raw SCPI access for this instance.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: enabled
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: bool
+    description: Robot-compatible result
+  coupling: []
+  side_effects:
+  - changes volatile driver or DMM configuration
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-103
+  tags:
+  - rfds:configuration
+  - rfds:high_risk
+  status: active
+  replacement: null
+- keyword: Stable Resistance Should Be Between
+  signature: Stable Resistance Should Be Between(result, minimum, maximum)
+  purpose: Execute Stable Resistance Should Be Between.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: result
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: minimum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: maximum
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-104
+  tags:
+  - rfds:assertion
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Try Read Stable Resistance
+  signature: Try Read Stable Resistance(expected_ohm=${NONE}, range_value=AUTO, nplc=10, final_nplc=100, min_settle=500 ms,
+    max_wait=20 s, sample_interval=200 ms, window_size=5, max_stdev_ohm=${NONE}, max_relative_stdev=0.0005, max_slope_relative_per_s=0.0005,
+    four_wire=${FALSE}, alias=${NONE})
+  purpose: Execute Try Read Stable Resistance.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: expected_ohm
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: range_value
+    kind: SCALAR
+    required: false
+    default: AUTO
+    description: documented by Libdoc and RFDS-017
+  - name: nplc
+    kind: SCALAR
+    required: false
+    default: 10
+    description: documented by Libdoc and RFDS-017
+  - name: final_nplc
+    kind: SCALAR
+    required: false
+    default: 100
+    description: documented by Libdoc and RFDS-017
+  - name: min_settle
+    kind: SCALAR
+    required: false
+    default: 500 ms
+    description: documented by Libdoc and RFDS-017
+  - name: max_wait
+    kind: SCALAR
+    required: false
+    default: 20 s
+    description: documented by Libdoc and RFDS-017
+  - name: sample_interval
+    kind: SCALAR
+    required: false
+    default: 200 ms
+    description: documented by Libdoc and RFDS-017
+  - name: window_size
+    kind: SCALAR
+    required: false
+    default: 5
+    description: documented by Libdoc and RFDS-017
+  - name: max_stdev_ohm
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: max_relative_stdev
+    kind: SCALAR
+    required: false
+    default: 0.0005
+    description: documented by Libdoc and RFDS-017
+  - name: max_slope_relative_per_s
+    kind: SCALAR
+    required: false
+    default: 0.0005
+    description: documented by Libdoc and RFDS-017
+  - name: four_wire
+    kind: SCALAR
+    required: false
+    default: false
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-105
+  tags:
+  - rfds:measurement
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Validate Driver Capabilities
+  signature: Validate Driver Capabilities()
+  purpose: Validate static capability bindings against the intended public keywords.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments: []
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-106
+  tags:
+  - rfds:diagnostic
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Validate Driver Configuration
+  signature: Validate Driver Configuration(configuration, strict=${TRUE})
+  purpose: Validate configuration without applying or persisting it.
+  risk_level: LOW
+  blocking: BLOCKING
+  idempotency: IDEMPOTENT
+  retry: SAFE_TO_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states: *id001
+  resulting_state: SAME
+  arguments:
+  - name: configuration
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: strict
+    kind: SCALAR
+    required: false
+    default: true
+    description: documented by Libdoc and RFDS-017
+  returns:
+  - name: result
+    kind: dict[str, Any]
+    description: driver_specific_dictionary
+  coupling: []
+  side_effects: []
+  exclusive_resources: []
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-107
+  tags:
+  - rfds:configuration
+  - rfds:low_risk
+  status: active
+  replacement: null
+- keyword: Write DMM Command
+  signature: Write DMM Command(command, alias=${NONE})
+  purpose: Execute Write DMM Command.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: command
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: COMPATIBILITY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-108
+  tags:
+  - rfds:raw_io
+  - rfds:high_risk
+  status: deprecated
+  replacement: Write Raw Command
+- keyword: Write Raw Command
+  signature: Write Raw Command(command, alias=${NONE})
+  purpose: Write a guarded raw SCPI command after explicit raw-I/O opt-in.
+  risk_level: HIGH
+  blocking: BLOCKING
+  idempotency: NON_IDEMPOTENT
+  retry: NEVER_RETRY
+  typical_execution_time_s: 0.5
+  stabilization_time_s: 0.0
+  valid_in_states:
+  - CONNECTED_LOCAL
+  - CONNECTED_REMOTE
+  - CONFIGURED
+  - WAITING_FOR_TRIGGER
+  - MEASURING
+  - HAS_UNREAD_OUTPUT
+  - ERROR_RECOVERY
+  resulting_state: SAME
+  arguments:
+  - name: command
+    kind: SCALAR
+    required: true
+    default: null
+    description: documented by Libdoc and RFDS-017
+  - name: alias
+    kind: SCALAR
+    required: false
+    default: null
+    description: documented by Libdoc and RFDS-017
+  returns: []
+  coupling: []
+  side_effects:
+  - documented driver state may change
+  exclusive_resources:
+  - dmm.session.{alias}
+  raises:
+  - VALIDATION_ERROR
+  - STATE_VIOLATION
+  - COMM_TIMEOUT
+  - COMMUNICATION_ERROR
+  - SCPI_ERROR
+  planning_priority: PRIMARY
+  planning:
+    estimated_duration_s: 0.5
+    operator_required: false
+    reboot_required: false
+    estimated_cost: LOW
+  protocol_vector: HP34401A-KW-109
+  tags:
+  - rfds:raw_io
+  - rfds:high_risk
+  status: active
+  replacement: null
+errors:
+- name: NO_ACTIVE_SESSION
+  class: STATE_VIOLATION
+  meaning: No selected session exists.
+  detection: Hp34401ARobotError contains 'No DMM session is open'.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Call `Connect DMM` or `Select DMM` with an open alias.
+- name: CONNECTION_FAILED
+  class: COMMUNICATION
+  meaning: Transport connection or initialization failed.
+  detection: Hp34401ARobotError is raised by a connection keyword.
+  post_error_state: REQUIRES_REINIT
+  retry: RETRY_AFTER_RESET
+  recovery: Verify resource ownership and backend, then call `Connect DMM` once.
+- name: IDENTITY_MISMATCH
+  class: CONFIGURATION
+  meaning: Connected instrument is not a supported 34401A.
+  detection: Connection or model assertion reports identity mismatch.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Correct the resource address and reconnect to a supported 34401A.
+- name: MISSING_BACKEND
+  class: CONFIGURATION
+  meaning: Requested PyVISA or PySerial backend is not installed.
+  detection: Error message requests installation of the relevant optional dependency.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Install `rf-hp34401a[visa]`, `[serial]`, or `[hardware]`.
+- name: RESOURCE_CONFLICT
+  class: CONFIGURATION
+  meaning: Alias or physical transport resource is already owned.
+  detection: Connection reports duplicate alias or backend reports resource busy.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Close the existing owner or use a unique alias and exclusive resource.
+- name: VALIDATION_ERROR
+  class: CONFIGURATION
+  meaning: An argument is outside the supported enum, range, or format.
+  detection: ValueError or Hp34401ARobotError is raised before unsafe I/O.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Correct the argument using the capability definition.
+- name: COMM_TIMEOUT
+  class: COMMUNICATION
+  meaning: The instrument did not answer before timeout.
+  detection: Core InstrumentTimeoutError is wrapped by Hp34401ARobotError.
+  post_error_state: STATE_UNDEFINED
+  retry: RETRY_AFTER_RESET
+  recovery: Call `Recover DMM`; verify health; retry once only when capability retry permits.
+- name: COMMUNICATION_ERROR
+  class: COMMUNICATION
+  meaning: Transport or SCPI framing failed.
+  detection: Core communication or protocol error is wrapped by Hp34401ARobotError.
+  post_error_state: STATE_UNDEFINED
+  retry: RETRY_AFTER_RESET
+  recovery: Call `Recover DMM`, then `Get DMM Health`; reconnect if recovery fails.
+- name: STATE_VIOLATION
+  class: STATE_VIOLATION
+  meaning: Keyword is invalid in the current command state.
+  detection: Core ProtocolError or adapter state guard is raised.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Query `Get DMM State` and execute the required configuration or trigger step.
+- name: SCPI_ERROR
+  class: HARDWARE_FAULT
+  meaning: The instrument reports a non-zero SCPI error.
+  detection: Error queue assertion or guarded command raises an instrument error.
+  post_error_state: STATE_UNDEFINED
+  retry: NEVER_RETRY
+  recovery: Read the error queue, correct the command or bench state, then clear status if appropriate.
+- name: OVERLOAD
+  class: HARDWARE_FAULT
+  meaning: The reading exceeds the selected range or supported measurement input.
+  detection: Measurement keyword rejects an overload sentinel and stores metadata with is_overload=true.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Remove or reduce the input, correct wiring, or choose a safe higher range.
+- name: INVALID_READING
+  class: HARDWARE_FAULT
+  meaning: Instrument response cannot be accepted as a valid scalar reading.
+  detection: Measurement keyword reports is_valid=false or missing value.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Inspect raw response and diagnostics; correct the bench before repeating.
+- name: UNSTABLE_MEASUREMENT
+  class: TRANSIENT
+  meaning: Resistance stability criteria were not met within max_wait.
+  detection: Read Stable Resistance raises MeasurementNotStableError.
+  post_error_state: STATE_UNCHANGED
+  retry: SAFE_TO_RETRY
+  recovery: Increase settling time only after verifying fixture isolation and leakage.
+- name: NO_READING
+  class: STATE_VIOLATION
+  meaning: No accepted last reading exists for the selected alias.
+  detection: Get Last DMM Reading reports no reading available.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Run a measurement keyword first.
+- name: ASSERTION_FAILED
+  class: CONFIGURATION
+  meaning: A returned reading or state does not satisfy the declared oracle.
+  detection: Robot assertion keyword raises AssertionError.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Treat as test failure; inspect measured value, unit, limits, and bench state.
+- name: SELF_TEST_FAILED
+  class: HARDWARE_FAULT
+  meaning: Instrument self-test returned a non-zero code.
+  detection: DMM Self Test Should Pass raises AssertionError.
+  post_error_state: STATE_UNDEFINED
+  retry: NEVER_RETRY
+  recovery: Remove DUT connections as required by site procedure and service the instrument.
+- name: TERMINAL_MISMATCH
+  class: SAFETY_TRIP
+  meaning: Front/rear terminal selection differs from the required fixture connection.
+  detection: Require DMM Input Terminal fails.
+  post_error_state: SAFE_STATE
+  retry: NEVER_RETRY
+  recovery: Move the selector or fixture to the declared terminal and re-verify.
+- name: CALIBRATION_BLOCKED
+  class: SAFETY_TRIP
+  meaning: A calibration-affecting raw SCPI command was blocked by policy.
+  detection: Guarded raw command raises calibration-command protection error.
+  post_error_state: STATE_UNCHANGED
+  retry: NEVER_RETRY
+  recovery: Do not bypass protection; use an authorized calibration procedure and explicit opt-in.
+- name: CLEANUP_FAILED
+  class: COMMUNICATION
+  meaning: One or more sessions failed to close during aggregate cleanup.
+  detection: Close All DMMs raises after attempting every alias.
+  post_error_state: STATE_UNDEFINED
+  retry: NEVER_RETRY
+  recovery: Physically verify bench state and close remaining resources manually.
+safety:
+  dangerous_operations:
+  - keyword: Measure DC Current
+    condition: DMM current input connected across a voltage source or expected current exceeds selected range
+    risk_level: HIGH
+  - keyword: Measure AC Current
+    condition: DMM current input connected across a voltage source or expected current exceeds selected range
+    risk_level: HIGH
+  - keyword: Measure 2 Wire Resistance
+    condition: DUT externally energized
+    risk_level: HIGH
+  - keyword: Measure 4 Wire Resistance
+    condition: DUT externally energized
+    risk_level: HIGH
+  - keyword: Write DMM Command
+    condition: Command changes undocumented state or calibration
+    risk_level: HIGH
+  forbidden_sequences:
+  - never:
+    - ANY_POWER_SOURCE.Enable Output
+    - Measure 2 Wire Resistance
+    reason: Resistance measurement injects test current and requires a de-energized DUT.
+  - never:
+    - ANY_POWER_SOURCE.Enable Output
+    - Measure 4 Wire Resistance
+    reason: Four-wire resistance measurement requires a de-energized DUT.
+  - never:
+    - Set DMM Trigger Source  source=BUS
+    - Read DMM
+    reason: READ? with BUS trigger is forbidden; use the bus-trigger workflow.
+  required_delays:
+  - after: ANY_RELAY.Close Relay
+    before: ANY_MEASUREMENT
+    min_delay_s: 0.2
+  - after: ANY_DUT_SETPOINT_CHANGE
+    before: Read Stable Resistance
+    min_delay_s: 0.5
+  hardware_limits:
+  - quantity: dc_voltage_measurement_range
+    unit: V
+    max: 1000.0
+  - quantity: ac_voltage_measurement_range
+    unit: V
+    max: 750.0
+  - quantity: dc_current_measurement_range
+    unit: A
+    max: 3.0
+  - quantity: ac_current_measurement_range
+    unit: A
+    max: 3.0
+  - quantity: resistance_measurement_range
+    unit: OHM
+    max: 100000000.0
+  safe_shutdown_sequence:
+  - Close All DMMs
+verification_objectives:
+- id: VO-DMM-001
+  goal: Verify that the connected instrument is a supported 34401A.
+  procedure:
+  - Connect DMM  resource=${DMM_RESOURCE}  transport=AUTO  alias=dmm
+  - Identify DMM  alias=dmm
+  - DMM Model Should Be 34401A  alias=dmm
+  oracle:
+    type: EXACT_MATCH
+    expected: 34401A
+    measured_by: Identify DMM.model
+  requires_drivers: []
+  risk_level: NONE
+  requirements_verified:
+  - RFDS-DMM-IDENTITY
+- id: VO-DMM-002
+  goal: Verify DC voltage against caller-provided inclusive limits.
+  procedure:
+  - Configure DC Voltage  range_value=AUTO  nplc=10  alias=dmm
+  - Measure DC Voltage  range_value=AUTO  nplc=10  alias=dmm
+  - DMM Reading Should Be Between  ${MIN_V}  ${MAX_V}  alias=dmm
+  oracle:
+    type: RANGE
+    min: ${MIN_V}
+    max: ${MAX_V}
+    unit: V
+    measured_by: Measure DC Voltage
+  requires_drivers:
+  - DC_SOURCE_OR_DUT
+  risk_level: LOW
+  requirements_verified:
+  - RFDS-DMM-DCV
+- id: VO-DMM-003
+  goal: Verify a de-energized resistance path against relative tolerance.
+  procedure:
+  - REQUIRE external sources disabled
+  - Read Stable Resistance  expected_ohm=${EXPECTED_OHM}  alias=dmm
+  - DMM Reading Should Be Close To  ${EXPECTED_OHM}  relative_tolerance=${REL_TOL}  alias=dmm
+  oracle:
+    type: TOLERANCE_REL
+    expected: ${EXPECTED_OHM}
+    tolerance: ${REL_TOL}
+    unit: OHM
+    measured_by: Read Stable Resistance
+  requires_drivers:
+  - RELAY_MATRIX_OPTIONAL
+  - DUT_POWER_CONTROL_OPTIONAL
+  risk_level: MEDIUM
+  requirements_verified:
+  - RFDS-DMM-RESISTANCE
+- id: VO-DMM-004
+  goal: Verify safe BUS-trigger acquisition ordering.
+  procedure:
+  - Configure DC Voltage  alias=dmm
+  - Set DMM Trigger Source  BUS  alias=dmm
+  - Read DMM Once With Bus Trigger  alias=dmm
+  oracle:
+    type: STATE_QUERY
+    expected: CONNECTED_REMOTE
+    measured_by: Get DMM State
+  requires_drivers: []
+  risk_level: LOW
+  requirements_verified:
+  - RFDS-DMM-TRIGGER
+- id: VO-DMM-005
+  goal: Verify that the instrument SCPI error queue is empty before test execution.
+  procedure:
+  - DMM Error Queue Should Be Empty  alias=dmm
+  oracle:
+    type: STATE_QUERY
+    expected: NO_ERROR
+    measured_by: DMM Error Queue Should Be Empty
+  requires_drivers: []
+  risk_level: NONE
+  requirements_verified:
+  - RFDS-DMM-HEALTH
+test_templates:
+- name: Measure DUT DC Voltage
+  required_drivers:
+  - rf_hp34401a.Hp34401ALibrary
+  - DC_SOURCE_OR_DUT
+  estimated_duration_s: 3.0
+  generated_workflow:
+  - Connect DMM
+  - DMM Model Should Be 34401A
+  - Measure DC Voltage
+  - DMM Reading Should Be Between
+  - Close All DMMs
+- name: E-Resistor Channel Verification
+  required_drivers:
+  - rf_hp34401a.Hp34401ALibrary
+  - ERESISTOR_DRIVER
+  - RELAY_MATRIX_DRIVER
+  estimated_duration_s: 10.0
+  generated_workflow:
+  - Set E-Resistor Resistance
+  - Open All Relays
+  - Close Selected Relay
+  - WAIT stabilization
+  - Read Stable Resistance
+  - Compare Result
+  - Open Selected Relay
+setup_teardown:
+  suite_setup:
+  - Connect DMM  resource=${DMM_RESOURCE}  transport=AUTO  alias=dmm
+  - DMM Model Should Be 34401A  alias=dmm
+  - DMM Error Queue Should Be Empty  alias=dmm
+  suite_teardown:
+  - Close All DMMs
+  teardown_safe_from_any_state: true
+  abort_semantics: Generated suites shall execute teardown using Run Keyword And Ignore Error or equivalent finally semantics.
+planning_hints:
+- Use `Connect DMM` for transport-neutral generated tests and retain explicit transport keywords only when backend-specific
+  options are required.
+- Call `Require DMM Input Terminal` before automated fixtures where front/rear selector mismatch can route the wrong circuit.
+- Prefer `Read Stable Resistance` for switched high-resistance paths and declare relay plus DUT settling separately in the
+  bench contract.
+- Treat current measurement as HIGH risk and require a current-limited series path verified by the RFDS-018 bench topology.
+- Never infer physical wiring from a VISA resource; combine this contract with the bench `system_ai_contract.yaml`.
+limitations:
+- The driver cannot determine actual external wiring, DUT power state, relay routing, or available independent protection.
+- The 34401A front/rear mechanical terminal position may be UNKNOWN on firmware or transports that do not support the query.
+- Physical HIL validation, long-duration stability, and concurrent thread execution are not yet certified for release v26.06.
+- Vendor VISA runtime software is external and is not installed by this package.
+- Raw SCPI can invalidate typed driver state and is intended for diagnostics only.
+unknown_handling:
+  literal: UNKNOWN
+  question_format: "<driver_name>.<field_path> is UNKNOWN \u2014 required for <affected planning step>"
+  conservative_defaults:
+    risk_level: HIGH
+    idempotency: NON_IDEMPOTENT
+    retry: NEVER_RETRY
+    blocking: BLOCKING
+    max_parallel_sessions: 1
+  rule: An AI planner shall not replace UNKNOWN with an optimistic guess.
+conformance:
+  rfds017_required_checks:
+  - MANDATORY_SECTIONS_PRESENT
+  - EVERY_ROBOT_KEYWORD_EXACTLY_ONCE
+  - SIGNATURES_MATCH_PUBLIC_INTERFACE
+  - ALL_RAISES_RESOLVE
+  - ALL_STATE_REFERENCES_RESOLVE
+  - ALL_OBJECTIVES_HAVE_ORACLES
+  - LOCK_HASH_MATCHES
+  validator: python scripts/validate_ai_contract.py
+  lock_algorithm: SHA-256
+  surface_order: Robot keyword name ascending
+  surface_line_format: Keyword(arg=default, ...)
+  rfds019_version: '1.1'
+  keyword_inventory: tests/conformance/data/keyword_inventory.yaml
+  protocol_vectors: tests/conformance/data/protocol_vectors.yaml
+  exclusions: tests/conformance/data/exclusions.yaml
+  robot_suite: tests/conformance/driver_call_protocol_conformance.robot
+  runner: python scripts/run_call_protocol_conformance.py
+  profile: APPROVED_FAKE_TRANSPORT_SCPI_BOUNDARY
+  exported_keyword_count: 109
+  device_facing_keyword_count: 50
+  protocol_error_vector_count: 4
+  evidence_status: RELEASE_SITE_ROBOT_EXECUTION_PENDING
+  required_evidence:
+  - output.xml
+  - log.html
+  - report.html
+  - keyword_inventory.json
+  - keyword_coverage.csv
+  - protocol_vector_results.json
+  - outbound_trace.log
+  - inbound_trace.log
+  - environment.json
+  - device_identity.json
+  - exclusions.json
+  - conformance_summary.md
+  real_device_status: HIL_ALL_API_SUITE_INCLUDED_EXECUTION_PENDING
+  rfds002:
+    version: '1.1'
+    public_api: api/public_api.yaml
+    keyword_count: 109
+open_questions:
+- Target bench physical topology and safety zones belong in RFDS-018 system_ai_contract.yaml.
+- Target instrument firmware revisions qualified by HIL are not yet recorded.
+- Site-specific current and voltage safety limits may be lower than instrument measurement ranges.

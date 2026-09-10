@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "artifact": "rf_hp34401a_v26.07.zip",
+  "generated_utc": null,
+  "builder_environment": {
+    "python": null,
+    "platform": null
+  },
+  "source_revision": "PENDING_BUILD",
+  "status": "REMEDIATION_CANDIDATE",
+  "note": "This file intentionally does not claim release provenance on dev. scripts/build_release.py resolves the exact Git revision and builder environment when a frozen release candidate is built."
+}

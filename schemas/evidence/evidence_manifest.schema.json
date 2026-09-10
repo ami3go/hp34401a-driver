@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rfds.local/schemas/rf_hp34401a/evidence_manifest.schema.json",
+  "title": "rfds.evidence_manifest",
+  "description": "RFDS-008 §30.1 evidence manifest: one entry per artifact in a run's result directory.",
+  "type": "object",
+  "required": ["schema", "schema_version", "run_id", "generated_timestamp_utc", "artifact_count", "artifacts"],
+  "properties": {
+    "schema": {"const": "rfds.evidence_manifest"},
+    "schema_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "run_id": {"type": "string"},
+    "generated_timestamp_utc": {"type": "string", "format": "date-time"},
+    "artifact_count": {"type": "integer", "minimum": 0},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "role", "size_bytes", "sha256"],
+        "properties": {
+          "path": {"type": "string"},
+          "role": {
+            "enum": [
+              "AUTHORITATIVE_RESULT", "RAW_OBSERVATION", "STRUCTURED_EVENT",
+              "STRUCTURED_MEASUREMENT", "IDENTITY", "CONFIGURATION",
+              "DERIVED_REPORT", "VISUALIZATION", "INTEGRITY", "REVIEW", "RELEASE"
+            ]
+          },
+          "size_bytes": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

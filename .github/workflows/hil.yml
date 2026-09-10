@@ -1,0 +1,52 @@
+name: Manual HIL
+
+on:
+  workflow_dispatch:
+    inputs:
+      transport:
+        description: VISA or SERIAL
+        required: true
+        default: VISA
+        type: choice
+        options: [VISA, SERIAL]
+
+permissions:
+  contents: read
+
+jobs:
+  hil:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install HIL dependencies
+        run: >-
+          python -m pip install --upgrade pip
+          "robotframework>=7,<8" "jsonschema>=4.20,<5"
+          "pyvisa>=1.14" "pyserial>=3.5" "pytest>=8" "pyyaml>=6.0"
+      - name: Install scpi-driver-core
+        env:
+          SCPI_CORE_PAT: ${{ secrets.SCPI_CORE_PAT }}
+        run: >-
+          python -m pip install
+          "scpi-driver-core @ git+https://x-access-token:${SCPI_CORE_PAT}@github.com/ami3go/scpi-driver-core.git@main"
+        shell: bash
+      - name: Install driver source
+        run: python -m pip install -e .
+      - run: python scripts/validate_ai_contract.py
+      - run: python scripts/validate_call_protocol_conformance.py
+      - run: python scripts/validate_real_hardware_api_suite.py
+      - shell: bash
+        run: >-
+          python -m robot --outputdir results/hil
+          --variable TRANSPORT:${{ inputs.transport }}
+          --variable VISA_RESOURCE:${{ secrets.HP34401A_VISA_RESOURCE }}
+          --variable SERIAL_PORT:${{ secrets.HP34401A_SERIAL_PORT }}
+          tests/hil
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hp34401a-hil-evidence-${{ github.sha }}
+          path: results/hil
