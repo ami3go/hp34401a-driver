@@ -92,17 +92,60 @@ After this, `/dev/usbtmc0` disappears and `pyvisa-py` should list a
 `lsusb`). Re-plugging the device, or a reboot, restores the kernel driver
 and undoes this.
 
-### Option B — permanent, no sudo needed per-session
+### Option B — permanent: make `/dev/usbtmc0` itself readable/writable
 
-Add a udev rule so the device is never claimed by `usbtmc` and is readable
-by your user, e.g. `/etc/udev/rules.d/99-hp34401a-usbtmc.rules`:
+This repo ships [`udev/99-hp34401a-usbtmc.rules`](../udev/99-hp34401a-usbtmc.rules).
+Install it:
+
+```bash
+sudo cp udev/99-hp34401a-usbtmc.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+# then physically unplug and replug the adapter -- `trigger` alone does not
+# reliably re-run rules that depend on attributes read at device-creation
+# time, which is exactly the failure mode if this still doesn't work
+```
+
+The rule is:
 
 ```
-SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="2065", DRIVER!="usbtmc", MODE="0666"
+KERNEL=="usbtmc*", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2065", MODE="0666"
 ```
 
-then `sudo udevadm control --reload-rules && sudo udevadm trigger`, and
-replug the device. Adjust the vendor/product IDs for your actual adapter.
+Two easy-to-get-wrong details, both real bugs an earlier draft of this guide
+had:
+
+- **`ATTRS` (plural), not `ATTR` (singular).** `idVendor`/`idProduct` live on
+  the *parent* USB device, not on the `usbtmc0` character device node the
+  rule is actually matching. `ATTR{...}` only checks the exact device the
+  event fires for and will silently never match; `ATTRS{...}` walks up the
+  parent chain.
+- **Replug, don't just `trigger`.** `udevadm trigger` replays add-events for
+  devices that are still plugged in, but on some systems the attributes this
+  rule depends on aren't re-evaluated correctly without a real
+  disconnect/reconnect. If `ls -la /dev/usbtmc0` still shows `root root`
+  after `trigger`, unplug and replug before concluding the rule is wrong.
+
+This rule fixes permission errors on `/dev/usbtmc0` (the direct-file check
+above, and anything else that opens that device node directly). It does
+**not** stop the kernel's `usbtmc` driver from claiming the interface in the
+first place — for that, see Option C.
+
+### Option C — permanent: also free the interface for `pyvisa-py`/libusb
+
+If you additionally want `pyvisa-py` (not just direct file I/O) to see the
+device, the kernel driver must not bind to it at all. Some udev versions
+support setting `driver_override` from a rule, before the driver probes:
+
+```
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="03eb", ATTR{idProduct}=="2065", ATTR{bInterfaceClass}=="fe", ATTR{driver_override}="none"
+```
+
+(here `ATTR`, singular, is correct — `idVendor`/`bInterfaceClass` genuinely
+are attributes of the raw USB device/interface this rule matches, unlike the
+`usbtmc0` character device in Option B). This is more kernel/distro-version
+sensitive than Option B; if it doesn't take effect after a replug, fall back
+to the manual `driver_override` + `unbind` from Option A each session.
 
 ### Sanity-check the raw connection first
 
@@ -178,7 +221,8 @@ Evidence lands under `results/real_hardware_all_api/rf_hp34401a/<timestamp>/`:
 |---|---|
 | `pyvisa.errors.VisaIOError: ... VI_ERROR_RSRC_NFOUND` | Resource string doesn't match what `list_resources()` reports, or the kernel driver still holds the device (see step 3) |
 | `pyvisa-py` lists ASRL resources but no USB one, even though `lsusb` shows the device | Kernel `usbtmc` driver has claimed the interface — do step 3 |
-| `PermissionError` opening `/dev/usbtmc0` or `/dev/ttyUSB0` | Device node isn't group/world readable — `sudo chmod 666 /dev/usbtmcN` for a one-off, or add the udev rule from step 3 for a permanent fix |
+| `PermissionError` opening `/dev/usbtmc0` or `/dev/ttyUSB0` | Device node isn't group/world readable — `sudo chmod 666 /dev/usbtmcN` for a one-off, or install `udev/99-hp34401a-usbtmc.rules` (Option B) for a permanent fix |
+| Installed the udev rule, reloaded rules, still `PermissionError` | Almost always one of: rule used `ATTR` instead of `ATTRS` (see Option B), or the device was never actually unplugged/replugged after reload — `udevadm trigger` alone is not always enough |
 | `sudo: a password is required` in a CI runner or container, and unbind silently has no effect | The environment likely lacks `CAP_SYS_ADMIN` for USB driver rebinding (common in sandboxed dev containers) — this needs a real host or a container launched with USB device-rebind capability; it is not something this driver or scpi-driver-core can work around |
 | `ConfigurationError: VisaTransport requires PyVISA` | `pip install pyvisa pyvisa-py pyusb` |
 | `ConfigurationError: SerialTransport requires pyserial` | `pip install pyserial` |

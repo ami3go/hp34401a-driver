@@ -1,0 +1,22 @@
+# USBTMC access for a 34401A connected via a USB-GPIB/USBTMC bridge
+# (e.g. a XyphroLabs GPIB-USB adapter, USB VID:PID 03eb:2065).
+#
+# Install:
+#   sudo cp udev/99-hp34401a-usbtmc.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#   (then unplug/replug the adapter -- `trigger` alone does not reliably
+#   re-run rules for attributes read at device-creation time)
+#
+# Adjust idVendor/idProduct below for your actual adapter if different;
+# check with `lsusb`.
+#
+# Uses KERNEL (not SUBSYSTEM) to match because the usbtmc driver creates the
+# /dev/usbtmc0 char device under a class subsystem ("usbmisc" or "usb"
+# depending on kernel version) that varies across distros, while the device
+# name itself ("usbtmc0") is stable. Uses ATTRS (plural, walks up the parent
+# device chain) rather than ATTR (singular, only the exact device the event
+# fires for) because idVendor/idProduct live on the parent USB device, not on
+# the usbtmc char device node itself -- this is the actual bug in an earlier
+# draft of this rule that left /dev/usbtmc0 root-only despite reloading udev.
+KERNEL=="usbtmc*", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2065", MODE="0666"
