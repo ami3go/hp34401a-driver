@@ -54,7 +54,7 @@ or:
 python -m pip install -e ".[hardware]"
 ```
 
-`scpi-driver-core` has no PyPI release yet, so `pyproject.toml` pins it to `git+https://github.com/ami3go/scpi-driver-core.git@main` — installing this driver requires git access to that (private) repository. Real VISA/GPIB access additionally requires a VISA implementation such as Keysight IO Libraries Suite, NI-VISA, or `pyvisa-py` (sufficient for USB/USBTMC).
+`scpi-driver-core` has no PyPI release (or even a tag) yet, so `pyproject.toml` pins it to a specific commit (`git+https://github.com/ami3go/scpi-driver-core.git@<sha>`) rather than `@main`, per RFDS-004 §6 ("the driver shall pin or constrain a compatible transport-package version"). Bumping that pin is a deliberate, reviewed action, not something that happens silently on the next install — installing this driver requires git access to that (private) repository. Real VISA/GPIB access additionally requires a VISA implementation such as Keysight IO Libraries Suite, NI-VISA, or `pyvisa-py` (sufficient for USB/USBTMC).
 
 Development environment:
 

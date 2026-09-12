@@ -32,7 +32,7 @@ pip install -e ".[hardware]"
 If that dependency fails to resolve, install it explicitly first:
 
 ```bash
-pip install "scpi-driver-core[serial,visa] @ git+https://github.com/ami3go/scpi-driver-core.git@main"
+pip install "scpi-driver-core[serial,visa] @ git+https://github.com/ami3go/scpi-driver-core.git@ec19ab88906d8e6ac270b30d7615ce7e75dc6a08"
 pip install -e . --no-deps
 ```
 

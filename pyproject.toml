@@ -17,7 +17,7 @@ dependencies = [
   # pins to the main branch of the private source repo. Installing this
   # driver requires git access to ami3go/scpi-driver-core. See
   # docs/scpi_driver_core_review.md.
-  "scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@main",
+  "scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@ec19ab88906d8e6ac270b30d7615ce7e75dc6a08",
   "jsonschema>=4.20,<5",
 ]
 

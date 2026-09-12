@@ -38,7 +38,7 @@ the transport/protocol boundary:
 | `hp34401a_dmm/visa_transport.py`: hand-rolled `pyvisa` open/read/write | Backed by `scpi_driver_core.transport.visa.VisaTransport` (GPIB, USBTMC, TCPIP INSTR/SOCKET, ASRL — resource-class agnostic) |
 | `hp34401a_dmm/transports.py::BaseTransport`: hand-rolled locking, terminator framing | `scpi_driver_core.scpi.client.ScpiClient` + `ScpiTextCodec` own locking, operation-ID correlation, and terminator framing; `BaseTransport` now only owns the one-outstanding-query rule and per-transport device-clear dispatch |
 | `hp34401a_dmm/transports.py::FakeTransport`: hand-rolled command→reply dict lookup | Backed by `scpi_driver_core.simulation.scripted.ScriptedScpiTransport`, with its exact prior public surface (`responses`, `error_queue`, `history`, `timeout_on`, ...) preserved so none of the ~20 dependent test files needed to change |
-| `pyproject.toml` / `requirements.txt`: `rfds-core>=1.0,<2.0` | `scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@main` (see "Known limitation" below) |
+| `pyproject.toml` / `requirements.txt`: `rfds-core>=1.0,<2.0` | `scpi-driver-core @ git+https://github.com/ami3go/scpi-driver-core.git@<pinned commit>` (see "Known limitation" below) |
 | `rf_hp34401a/plugin.py::_rfds_core_check` | `_scpi_driver_core_check`, resolving the real `scpi_driver_core` import/distribution |
 | `hp34401a_dmm/evidence.py`, `rf_hp34401a/runtime_library.py` | Resolve `scpi-driver-core`'s installed version instead of the fictional `rfds-core`. Field/key names (`rfds_core_version`, `rfds_core_runtime_version`) are kept as-is for schema/public-API compatibility — only what they resolve changed. A rename is a reasonable follow-up for a future major version. |
 
@@ -63,11 +63,15 @@ the transport/protocol boundary:
 ## Known limitations / deviations
 
 1. **No PyPI release for scpi-driver-core.** It is `0.1.0.dev0`, private, with
-   no tags. The dependency is pinned to `@main` via a git URL. Installing this
-   driver requires git access (and, for a private-repo clone over HTTPS,
-   credentials) to `ami3go/scpi-driver-core`. CI needs a token with access to
-   that repo to install it; this was not wired up as part of this migration
-   and should be added as a repo secret before CI is expected to pass.
+   no tags. The dependency is pinned to a specific commit SHA via a git URL
+   (`@ec19ab88906d8e6ac270b30d7615ce7e75dc6a08` as of this writing) rather
+   than `@main`, per RFDS-004 §6's requirement to pin or constrain a
+   compatible transport-package version — bumping it is a deliberate,
+   reviewed action. Installing this driver requires git access (and, for a
+   private-repo clone over HTTPS, credentials) to `ami3go/scpi-driver-core`.
+   CI needs a token with access to that repo to install it; this was not
+   wired up as part of this migration and should be added as a repo secret
+   before CI is expected to pass.
 2. **`SerialTransport` does not expose pyserial's `dsrdtr` hardware
    flow-control flag.** The 34401A's RS-232 config
    (`SerialRs232Config.use_dtr_dsr`) is accepted but not applied, because

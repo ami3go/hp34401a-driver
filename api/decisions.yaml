@@ -9,3 +9,21 @@ decisions:
   choice: Not applicable
   justification: The DMM creates no persistent hazardous output; Disconnect releases
     communication only.
+- id: HP34401A-DEC-003
+  subject: RFDS-003 SS8 authoritative shared-core package identity
+  choice: Depend on scpi-driver-core (git-pinned) instead of a package literally
+    named rfds-core.
+  justification: >-
+    rfds-core, as named in RFDS-003 SS8.2's example, was never published
+    anywhere (no PyPI release, no repository) and could not be installed.
+    RFDS-003 SS8.1 states the name "rfds-core" is a recommended (should,
+    per SS5's terminology) choice, not a mandatory one; SS8.2's "shall"
+    requirement is for a compatible, version-constrained shared-core
+    dependency to exist and be declared, not for a specific package name.
+    scpi-driver-core is a real, installable package implementing the
+    RFDS-004 transport-layer contract (same canonical Transport interface,
+    same author) and is pinned to a specific commit per RFDS-004 SS6. It
+    does not, and is not intended to, satisfy RFDS-003's separate
+    BaseInstrumentLibrary requirement -- see HP34401A-DEV-004 in
+    api/deviations.yaml, which remains open. See
+    docs/scpi_driver_core_review.md for the full review.
