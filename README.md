@@ -13,13 +13,13 @@ Robot Framework driver for the HP/Agilent/Keysight 34401A 6½-digit DMM.
 | Public Robot keywords | 109 |
 | Runtime dependencies | `robotframework>=7,<8`, `scpi-driver-core` (git, pre-release), `jsonschema>=4.20,<5` |
 | Shared-core migration | transport/protocol layer migrated onto `scpi-driver-core`; see [`docs/scpi_driver_core_review.md`](docs/scpi_driver_core_review.md) |
-| Hardware qualification | **PENDING on exact corrected commit** |
+| Hardware qualification | **Partial real-device validation passed; full all-public-API HIL pending** |
 
 The public Robot adapter delegates SCPI measurement behavior to the reviewed `hp34401a_dmm` core. It rejects overload, invalid, missing, and unstable readings instead of returning plausible fabricated values. Hardware connection never silently falls back to simulation.
 
 ## Current remediation status
 
-The 2026-08-16 deep review found cross-file and release-governance defects that were not visible in the earlier high-level review. The `dev` branch now includes corrections for:
+The 2026-08-16 deep review found cross-file and release-governance defects that were not visible in the earlier high-level review. The current `main` baseline includes corrections for:
 
 - repository-root GitHub Actions CI/HIL/Pages workflows;
 - fail-closed RFDS-008 evidence run status and manifest-stable diagnostic export;
@@ -55,6 +55,8 @@ python -m pip install -e ".[hardware]"
 ```
 
 `scpi-driver-core` has no PyPI release (or even a tag) yet, so `pyproject.toml` pins it to a specific commit (`git+https://github.com/ami3go/scpi-driver-core.git@<sha>`) rather than `@main`, per RFDS-004 §6 ("the driver shall pin or constrain a compatible transport-package version"). Bumping that pin is a deliberate, reviewed action, not something that happens silently on the next install — installing this driver requires git access to that (private) repository. Real VISA/GPIB access additionally requires a VISA implementation such as Keysight IO Libraries Suite, NI-VISA, or `pyvisa-py` (sufficient for USB/USBTMC).
+
+When a USBTMC GPIB-USB bridge is used through `pyvisa-py`, VISA `clear()` may be unsupported for that resource class. The validated workaround is `clear_on_connect=False`; see [`guide/real_hardware_host_setup.md`](guide/real_hardware_host_setup.md) for the tested configuration and device-permission setup.
 
 Development environment:
 
@@ -191,6 +193,12 @@ The Tkinter GUI remains available through `hp34401a_gui.app`. Its mature impleme
 Every raw `Query` or `Write` button action requires a fresh operator confirmation warning that the operation can change instrument state and bypass high-level measurement sequencing. Declining the prompt sends no raw command. Calibration commands remain separately guarded by the core driver.
 
 ## RFDS-019 and HIL
+
+### Current real-hardware evidence
+
+On 2026-09-14, a genuine HP 34401A connected through a XyphroLabs USBTMC GPIB-USB bridge was exercised end to end through `VisaGpibTransport`, `pyvisa`, and `pyvisa-py`. Connection, identity parsing, heartbeat/error-queue handling, and a live front-panel terminal query all passed against the physical instrument.
+
+This is meaningful transport and representative-device evidence, but it is not the full RFDS-019 all-public-API HIL run. Measurement, reset, self-test, calibration, and other fixture-dependent profiles remain disabled until an approved, safely wired fixture is available. The release therefore remains D0 and does not claim D2 or P1 readiness. See [`docs/scpi_driver_core_review.md`](docs/scpi_driver_core_review.md#real-hardware-check) for the evidence and confirmed backend limitation.
 
 Static call/protocol validation:
 
