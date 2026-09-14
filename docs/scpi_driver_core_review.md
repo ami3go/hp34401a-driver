@@ -118,31 +118,78 @@ the transport/protocol boundary:
 
 ## Real-hardware check
 
-A genuine HP 34401A was available on the development machine, bridged over
-USBTMC through a XyphroLabs GPIB-USB adapter (USB VID:PID `03eb:2065`,
-enumerating as an "Atmel LUFA Test and Measurement Demo" — the adapter's
-firmware, not the instrument). A direct, byte-level `*IDN?` probe against the
-kernel's `/dev/usbtmc0` character device returned:
+A genuine HP 34401A was available, bridged over USBTMC through a XyphroLabs
+GPIB-USB adapter (USB VID:PID `03eb:2065`, enumerating as an "Atmel LUFA Test
+and Measurement Demo" — the adapter's firmware, not the instrument). Getting
+`pyvisa-py` to see it took two fixes, both now automated by
+`udev/diagnose_usbtmc.sh` (repo root) and documented in
+`guide/real_hardware_host_setup.md` (repo root):
+
+1. the kernel's `usbtmc` driver holds the interface by default, which blocks
+   `pyvisa-py`'s `libusb`-based backend from claiming it — fixed by unbinding
+   the driver (`driver_override=none` + `unbind`);
+2. even unbound, the raw `/dev/bus/usb/<bus>/<dev>` node stayed root-owned
+   (`crw-rw-r--`), which surfaces as `pyusb` failing to read string
+   descriptors (`ValueError: device has no langid (permission issue...)`)
+   — fixed with `chmod 666` on that node.
+
+With both fixed, `pyvisa-py` correctly enumerated:
 
 ```
-HEWLETT-PACKARD,34401A,0,11-5-2
+USB0::1003::8293::HEWLETT-PACKARD_34401A_0_11-5-2::0::INSTR
 ```
 
-confirming a real, responsive 34401A. Routing this through the migrated
-`VisaGpibTransport` (i.e., through `pyvisa`/`pyvisa-py`) was attempted but not
-completed: `pyvisa-py`'s USB backend uses `libusb`/`pyusb`, which requires the
-kernel's `usbtmc` driver to release the interface first. Unbinding it
-(`/sys/bus/usb/drivers/usbtmc/unbind`) failed with `Permission denied (os
-error 13)` even under `sudo` in this sandboxed environment — a container-level
-restriction (no `CAP_SYS_ADMIN` for USB driver rebinding), not a credentials
-problem. This is an environment limitation, not a defect in the migration:
-`scpi_driver_core.transport.visa.VisaTransport` itself places no additional
-constraint beyond what `pyvisa` requires. Re-running the real-hardware HIL
-suite (`tests/hil/verify_all_public_api_real_hardware.robot`) against this
-instrument from a machine (or container) with USB driver-rebind capability is
-a reasonable follow-up — see `guide/real_hardware_host_setup.md` (repo root)
-for exactly how to do that, including the udev-rule workaround for this
-specific kernel-driver-vs-libusb conflict.
+(VID/PID reported in **decimal**, not hex — `1003` = `0x03EB`, `8293` =
+`0x2065` — plus an interface index (`::0::`) between the serial number and
+`INSTR`.)
+
+**The migrated transport was then exercised directly against the real
+instrument, end to end, through `VisaGpibTransport` → `pyvisa` →
+`pyvisa-py`:**
+
+```python
+from hp34401a_dmm import Hp34401A
+from hp34401a_dmm.config import VisaGpibConfig
+from dataclasses import replace
+
+config = replace(
+    VisaGpibConfig(resource="USB0::1003::8293::HEWLETT-PACKARD_34401A_0_11-5-2::0::INSTR"),
+    clear_on_connect=False,  # see the finding below
+)
+d = Hp34401A.from_visa_gpib(config)
+d.connect()
+d.identify()    # Identity(manufacturer='HEWLETT-PACKARD', model='34401A', serial=None, firmware='11-5-2', ...)
+d.heartbeat()    # HealthReport(connected=True, error_queue_clean=True, state='CONNECTED_REMOTE', ...)
+d.query_terminal()  # InputTerminal.FRONT -- a real front-panel query, not a canned reply
+d.close()
+```
+
+All of the above passed against the physical instrument: connection
+lifecycle, `*IDN?` parsing, error-queue draining, and a real front-panel
+terminal query all round-tripped correctly through the fully migrated
+transport stack.
+
+**One real, pre-existing finding, not a migration regression:** with
+`VisaGpibConfig`'s default `clear_on_connect=True`, `connect()` failed with
+
+```
+VI_ERROR_NSUP_OPER: The given session or object reference does not support this operation.
+```
+
+`scpi_driver_core.transport.visa.VisaTransport.flush()` calls
+`resource.clear()`, and `pyvisa-py`'s pure-Python USB/libusb backend does not
+implement VISA `clear()` for this resource class. The pre-migration code hit
+the exact same `pyvisa` call (`self._inst.clear()`) and would have failed
+identically — this is a `pyvisa-py`/backend limitation, not something the
+migration introduced, and it's exactly the kind of "vendor VISA backends
+differ in clear, timeout, lock, USBTMC, GPIB behavior" risk already listed in
+`review/known_risks.md`, now confirmed concretely rather than theoretically.
+Workaround: set `clear_on_connect=False` for USBTMC-via-`pyvisa-py` setups.
+
+Not yet done: the full `tests/hil/verify_all_public_api_real_hardware.robot`
+suite with its opt-in measurement profiles (that needs a wired, approved,
+safe fixture per `guide/hardware_test_setup.md`, deliberately out of scope
+for an unattended validation pass).
 
 ## What was also fixed along the way (pre-existing, unrelated to scpi-driver-core)
 

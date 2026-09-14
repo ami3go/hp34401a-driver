@@ -105,10 +105,10 @@ re-claimed by the kernel a moment later — set the override first. This does
 **not** persist across a replug or reboot; re-run it (or the script) each
 time you reconnect the adapter.
 
-After this, `/dev/usbtmc0` disappears and `pyvisa-py` should list a
-`USB0::0x03EB::0x2065::<serial>::INSTR`-style resource (VID/PID from
-`lsusb`). Re-plugging the device, or a reboot, restores the kernel driver
-and undoes this.
+After this, `/dev/usbtmc0` disappears. `pyvisa-py` may still not list the
+device even now -- see "The second, easy-to-miss fix" below before
+concluding this step failed. Re-plugging the device, or a reboot, restores
+the kernel driver and undoes this.
 
 ### Option B — permanent: make `/dev/usbtmc0` itself readable/writable
 
@@ -165,6 +165,28 @@ are attributes of the raw USB device/interface this rule matches, unlike the
 sensitive than Option B; if it doesn't take effect after a replug, fall back
 to the manual `driver_override` + `unbind` from Option A each session.
 
+### The second, easy-to-miss fix: the raw `/dev/bus/usb/*` node
+
+Unbinding the kernel driver (Option A or C) is necessary but **not
+sufficient**. Confirmed on real hardware: even fully unbound, `pyusb`/libusb
+still failed to read the manufacturer/product/serial string descriptors --
+
+```
+ValueError: The device has no langid (permission issue, no string descriptors supported or device error)
+```
+
+-- because the raw device node stayed `crw-rw-r-- root root`:
+
+```bash
+lsusb -d 03eb:2065          # note the Bus/Device numbers it prints
+ls -la /dev/bus/usb/001/003  # substitute your actual bus/device numbers
+sudo chmod 666 /dev/bus/usb/001/003
+```
+
+This has to be redone on every replug (the device gets a new device number
+each time). [`udev/diagnose_usbtmc.sh --fix`](../udev/diagnose_usbtmc.sh)
+automates both this and the unbind in one command -- see below.
+
 ### Sanity-check the raw connection first
 
 Before touching pyvisa at all, confirm the instrument answers, independent
@@ -190,20 +212,52 @@ you should see your instrument.
 ## 4. Identity-only check through the actual driver (safe, non-destructive)
 
 Before running any test suite, confirm the migrated transport can talk to
-the real instrument:
+the real instrument. Note `pyvisa-py` reports VID/PID in **decimal**, not
+hex (confirmed: `1003` = `0x03EB`, `8293` = `0x2065`), and the resource
+string has an interface index (`::0::`) between the serial number and
+`INSTR` that's easy to miss if you're constructing it by hand instead of
+reading it from `list_resources()`:
 
 ```bash
 python3 - <<'EOF'
 from hp34401a_dmm.visa_transport import VisaGpibTransport
 from hp34401a_dmm.config import VisaGpibConfig
 
-# Use the resource string pyvisa-py listed, e.g.:
-config = VisaGpibConfig(resource="USB0::0x03EB::0x2065::<serial>::INSTR")
+# Use the exact resource string pyvisa-py's list_resources() printed, e.g.:
+config = VisaGpibConfig(resource="USB0::1003::8293::HEWLETT-PACKARD_34401A_0_11-5-2::0::INSTR")
 t = VisaGpibTransport(config)
 t.open()
 print(t.query("*IDN?"))
 t.close()
 EOF
+```
+
+Confirmed against real hardware: this returns the actual instrument's
+`*IDN?` reply through the fully migrated transport stack (not a canned
+response).
+
+**One gotcha found this way, not a driver bug:** `VisaGpibConfig`'s default
+`clear_on_connect=True` makes `Hp34401A.connect()` fail with
+`VI_ERROR_NSUP_OPER` -- `pyvisa-py`'s USB/libusb backend doesn't implement
+VISA `clear()` for this resource class. Pass `clear_on_connect=False` (via
+`dataclasses.replace()`, since the config is frozen) when using a USBTMC
+adapter through `pyvisa-py`:
+
+```python
+from hp34401a_dmm import Hp34401A
+from hp34401a_dmm.config import VisaGpibConfig
+from dataclasses import replace
+
+config = replace(
+    VisaGpibConfig(resource="USB0::1003::8293::HEWLETT-PACKARD_34401A_0_11-5-2::0::INSTR"),
+    clear_on_connect=False,
+)
+d = Hp34401A.from_visa_gpib(config)
+d.connect()
+print(d.identify())
+print(d.heartbeat())
+print(d.query_terminal())
+d.close()
 ```
 
 For RS-232, use `hp34401a_dmm.serial_transport.SerialRs232Transport` with a
@@ -217,7 +271,7 @@ explicitly enabled (see `tests/hil/profiles/real_hardware_all_api.template.yaml`
 Start with identity/health only:
 
 ```bash
-./scripts/run_all_api_hil.sh "USB0::0x03EB::0x2065::<serial>::INSTR"
+./scripts/run_all_api_hil.sh "USB0::1003::8293::<serial>::0::INSTR"
 ```
 
 For RS-232 instead of VISA, use `scripts/run_hil_tests.sh` and pass

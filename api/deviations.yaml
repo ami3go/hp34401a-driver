@@ -55,15 +55,22 @@ deviations:
   - RFDS-001 representative real-device validation
   status: OPEN
   reason: >-
-    Partial progress: a genuine HP 34401A (behind a USBTMC GPIB-USB bridge)
-    was identified and answered *IDN? correctly during scpi-driver-core
-    migration validation, confirming real hardware is available. The full
-    tests/hil/verify_all_public_api_real_hardware.robot run against it was
-    not completed: pyvisa-py's libusb backend needs the kernel usbtmc driver
-    to release the interface, which the validating environment could not
-    grant (no CAP_SYS_ADMIN for USB driver rebinding). See
-    guide/real_hardware_host_setup.md for how to complete this on a host
-    with USB driver-rebind capability.
+    Substantial progress, not yet complete: a genuine HP 34401A (behind a
+    XyphroLabs USBTMC GPIB-USB bridge) was connected end to end through the
+    actual migrated VisaGpibTransport / pyvisa / pyvisa-py stack -- connect,
+    identify(), heartbeat(), and a real query_terminal() front-panel read all
+    round-tripped correctly against physical hardware (not just *IDN? via a
+    raw file probe). See docs/scpi_driver_core_review.md for the full
+    session, including a confirmed pyvisa-py VISA-clear() limitation
+    (workaround: clear_on_connect=False) that is a backend limitation, not a
+    driver defect. Getting pyvisa-py to see the device at all required two
+    fixes now automated by udev/diagnose_usbtmc.sh: unbinding the kernel
+    usbtmc driver, and separately fixing /dev/bus/usb/<bus>/<dev> node
+    permissions for libusb. What remains open: the full
+    tests/hil/verify_all_public_api_real_hardware.robot suite with its
+    opt-in measurement profiles has not been run -- that needs a wired,
+    approved, safe fixture per guide/hardware_test_setup.md, not just a
+    connectivity/identity check.
   release_effect: D2/P1 shall not be claimed.
 - id: HP34401A-DEV-004
   rules:
