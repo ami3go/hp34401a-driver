@@ -71,9 +71,25 @@ python -c "import pyvisa; print(pyvisa.ResourceManager('@py').list_resources())"
 #    lsusb shows the device
 ```
 
-You have two options:
+You have two options.
+
+[`udev/diagnose_usbtmc.sh`](../udev/diagnose_usbtmc.sh) automates finding the
+device and applying Option A below, and reports `pyvisa-py`'s resource list
+before/after so you don't have to do this by hand each time:
+
+```bash
+source .venv/bin/activate           # needs pyvisa/pyvisa-py installed
+./udev/diagnose_usbtmc.sh           # diagnose only
+./udev/diagnose_usbtmc.sh --fix     # diagnose, then apply the unbind (sudo)
+```
+
+It's hardcoded to VID:PID `03eb:2065` (the XyphroLabs adapter this was
+written against) — edit the `VID`/`PID` variables at the top for a different
+adapter.
 
 ### Option A — quick, one-off (resets on unplug or reboot)
+
+The manual version of what the script above does:
 
 ```bash
 # Find the bound interface (replace 1-2 with your bus-port path from lsusb -t)
@@ -85,7 +101,9 @@ echo "<bus-port>:1.0" | sudo tee /sys/bus/usb/drivers/usbtmc/unbind
 ```
 
 Plain `unbind` without the `driver_override` line first often gets silently
-re-claimed by the kernel a moment later — set the override first.
+re-claimed by the kernel a moment later — set the override first. This does
+**not** persist across a replug or reboot; re-run it (or the script) each
+time you reconnect the adapter.
 
 After this, `/dev/usbtmc0` disappears and `pyvisa-py` should list a
 `USB0::0x03EB::0x2065::<serial>::INSTR`-style resource (VID/PID from
