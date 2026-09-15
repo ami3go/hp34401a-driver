@@ -65,7 +65,7 @@ def as_seconds(value: Any, *, name: str = "duration") -> float:
             from robot.utils import timestr_to_secs
 
             seconds = float(timestr_to_secs(text))
-        except Exception:
+        except Exception:  # noqa: BLE001 - falls back to this module's own parser below
             match = re.fullmatch(
                 r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*(ms|s|sec|secs|second|seconds|min|mins|minute|minutes|h|hr|hrs|hour|hours)?",
                 text,

@@ -1,9 +1,13 @@
 """Hardware-gated integration tests (spec section 29.3). Skipped unless env vars set."""
+
 import os
+
 import pytest
 
 from hp34401a_dmm import (
-    DriverConfig, Hp34401A, SerialRs232Config, VisaGpibConfig,
+    Hp34401A,
+    SerialRs232Config,
+    VisaGpibConfig,
 )
 
 RUN = os.environ.get("HP34401A_RUN_HARDWARE_TESTS") == "1"

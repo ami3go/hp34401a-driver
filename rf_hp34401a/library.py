@@ -59,7 +59,9 @@ class Hp34401ALibrary(_RuntimeHp34401ALibrary):
                 None if destination in (None, "") else str(destination)
             )
 
-        requested = None if destination in (None, "") else Path(str(destination)).expanduser().resolve()
+        requested = (
+            None if destination in (None, "") else Path(str(destination)).expanduser().resolve()
+        )
         root = Path(run.root).resolve()
         if requested is not None:
             try:

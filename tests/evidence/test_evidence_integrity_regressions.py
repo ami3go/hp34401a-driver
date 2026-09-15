@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from rf_hp34401a import Hp34401ALibrary
-
+from rf_hp34401a.exceptions import RFDSDriverError
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 
@@ -33,7 +33,7 @@ def test_prior_keyword_failure_cannot_be_hidden_by_successful_disconnect(tmp_pat
     monkeypatch.setenv("RFDS_EVIDENCE_ROOT", str(tmp_path / "results"))
     library = Hp34401ALibrary()
     library.open_simulated_dmm(alias="default", reading=1.0)
-    with pytest.raises(Exception):
+    with pytest.raises(RFDSDriverError):
         library.select_dmm("missing")
     library.disconnect_all()
 

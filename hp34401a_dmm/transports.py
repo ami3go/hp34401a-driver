@@ -125,7 +125,7 @@ class BaseTransport:
                     "is unread (one-outstanding-query rule)."
                 )
             self._log_traffic("WRITE", command)
-            self._call(lambda: self._client.write(command, timeout_s=self._timeout_s))
+            self._call(lambda: self._require_client().write(command, timeout_s=self._timeout_s))
 
     def query(self, command: str) -> str:
         with self._lock:
@@ -137,8 +137,11 @@ class BaseTransport:
             t0 = time.monotonic()
             self._has_unread_output = True
             try:
-                response = self._call(lambda: self._client.query(command, timeout_s=self._timeout_s))
-            except Exception:
+                response = self._call(
+                    lambda: self._require_client().query(command, timeout_s=self._timeout_s)
+                )
+            # TRY203: except is required so `else` below only clears the flag on success.
+            except Exception:  # noqa: TRY203
                 # A real instrument can still send the response after the PC-side
                 # timeout. Keep the unread-output flag set until clear()/read_raw()
                 # is used so the driver cannot accidentally send another query and
@@ -152,16 +155,21 @@ class BaseTransport:
     def read_raw(self) -> str:
         """Recovery-only raw read. Does not enforce the query rule."""
         with self._lock:
-            request = self._client.response_request
-            raw = self._call(lambda: self._core.read(request, timeout_s=self._timeout_s))
+            client = self._require_client()
+            request = client.response_request
+            raw = self._call(lambda: self._require_core().read(request, timeout_s=self._timeout_s))
             self._has_unread_output = False
-            return self._client.codec.decode_response(raw)
+            return client.codec.decode_response(raw)
 
     def write_raw(self, data: str) -> None:
         """Recovery-only raw write (e.g. Ctrl-C). Does not append a terminator."""
         with self._lock:
             self._log_traffic("RAW", data)
-            self._call(lambda: self._core.write(data.encode(self._encoding), timeout_s=self._timeout_s))
+            self._call(
+                lambda: self._require_core().write(
+                    data.encode(self._encoding), timeout_s=self._timeout_s
+                )
+            )
 
     def clear(self) -> None:
         with self._lock:
@@ -223,9 +231,21 @@ class BaseTransport:
 
     def _do_clear(self) -> None:
         """Default device-clear: flush both directions on the byte transport."""
-        self._core.flush(FlushDirection.BOTH)
+        self._require_core().flush(FlushDirection.BOTH)
 
     # -- helpers ------------------------------------------------------------
+    def _require_client(self) -> ScpiClient:
+        """Narrow ``self._client`` to non-None, raising a typed error if not open."""
+        if self._client is None:
+            raise TransportError(f"{self.name} is not open")
+        return self._client
+
+    def _require_core(self) -> CoreTransport:
+        """Narrow ``self._core`` to non-None, raising a typed error if not open."""
+        if self._core is None:
+            raise TransportError(f"{self.name} is not open")
+        return self._core
+
     def _call(self, action):
         try:
             return action()
@@ -250,9 +270,7 @@ class BaseTransport:
         if response is None:
             _log.debug("[%s] %s -> %r", self.name, kind, command)
         else:
-            _log.debug(
-                "[%s] %s %r => %r (%.3fs)", self.name, kind, command, response, dur or 0.0
-            )
+            _log.debug("[%s] %s %r => %r (%.3fs)", self.name, kind, command, response, dur or 0.0)
 
 
 class FakeTransport(BaseTransport):
@@ -339,7 +357,7 @@ class FakeTransport(BaseTransport):
             self.write_history.append(command)
             if command in self.timeout_on:
                 raise InstrumentTimeoutError(f"Fake timeout on {command!r}")
-            self._client.write(command)
+            self._require_client().write(command)
 
     def query(self, command: str) -> str:
         with self._lock:
@@ -352,7 +370,7 @@ class FakeTransport(BaseTransport):
                 self._has_unread_output = True
                 raise InstrumentTimeoutError(f"Fake timeout on {command!r}")
             if self._is_known_query(command):
-                response = self._client.query(command)
+                response = self._require_client().query(command)
             else:
                 # Nothing was registered to answer this on the wire, so no reply
                 # is queued anywhere; resolve straight to default_response

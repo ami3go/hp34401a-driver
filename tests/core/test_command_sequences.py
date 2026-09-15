@@ -4,7 +4,6 @@ import pytest
 
 from hp34401a_dmm import (
     AutoRange,
-    AutozeroMode,
     DriverConfig,
     FakeTransport,
     Hp34401A,
@@ -12,15 +11,18 @@ from hp34401a_dmm import (
     ProtocolError,
     TriggerSource,
 )
-from hp34401a_dmm.driver import estimate_measurement_timeout_s
-from hp34401a_dmm.enums import MeasurementFunction
 
 
 def make_driver(responses=None, **fake_kw):
     t = FakeTransport(responses=responses or {}, **fake_kw)
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+        ),
+    )
     d.connect()
     return d, t
 
@@ -52,7 +54,7 @@ def test_autorange_emits_range_auto_on():
 
 
 def test_read_with_bus_trigger_is_rejected():
-    d, t = make_driver()
+    d, _t = make_driver()
     d.set_trigger_source(TriggerSource.BUS)
     with pytest.raises(ProtocolError):
         d.read_query()
@@ -75,7 +77,7 @@ def test_bus_trigger_uses_init_trg_fetch_not_read():
 
 
 def test_overload_classified_not_returned_as_value():
-    d, t = make_driver({"READ?": "9.90000000E+37"})
+    d, _t = make_driver({"READ?": "9.90000000E+37"})
     reading = d.measure_dc_voltage(10.0, Nplc.PLC10)
     assert reading.is_overload is True
     assert reading.value is None
@@ -83,7 +85,7 @@ def test_overload_classified_not_returned_as_value():
 
 
 def test_count_product_above_512_rejected():
-    d, t = make_driver()
+    d, _t = make_driver()
     with pytest.raises(ValueError):
         d._validate_counts(sample_count=600, trigger_count=1)
     with pytest.raises(ValueError):
@@ -91,7 +93,7 @@ def test_count_product_above_512_rejected():
 
 
 def test_invalid_range_rejected():
-    d, t = make_driver()
+    d, _t = make_driver()
     with pytest.raises(ValueError):
         d.configure_dc_voltage(7.0, Nplc.PLC10)  # 7 V is not a valid DCV range
 
@@ -101,12 +103,18 @@ def test_one_outstanding_query_protection():
     # query must raise ProtocolError before sending.
     t = FakeTransport()
     t.timeout_on.add("READ?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=False,
+        ),
+    )
     d.connect()
     from hp34401a_dmm import InstrumentTimeoutError
+
     with pytest.raises(InstrumentTimeoutError):
         d.query("READ?")
     with pytest.raises(ProtocolError):

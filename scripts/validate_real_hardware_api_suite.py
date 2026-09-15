@@ -25,10 +25,16 @@ def validate() -> list[str]:
     if missing:
         errors.append(f"Public keywords missing from real-HIL suite: {missing}")
     required_controls = [
-        "${HIL_ENABLED}", "${FAIL_ON_EXCLUSIONS}", "${VISA_RESOURCE}",
-        "Exclude Real Hardware API Keywords", "Finalize Real Hardware API Coverage",
-        "Suite Teardown", "RUN_DC_VOLTAGE_PROFILE", "RUN_RAW_IO_PROFILE",
-        "RUN_RESET_PROFILE", "RUN_SERIAL_PROFILE",
+        "${HIL_ENABLED}",
+        "${FAIL_ON_EXCLUSIONS}",
+        "${VISA_RESOURCE}",
+        "Exclude Real Hardware API Keywords",
+        "Finalize Real Hardware API Coverage",
+        "Suite Teardown",
+        "RUN_DC_VOLTAGE_PROFILE",
+        "RUN_RAW_IO_PROFILE",
+        "RUN_RESET_PROFILE",
+        "RUN_SERIAL_PROFILE",
     ]
     for control in required_controls:
         if control not in text:
@@ -88,7 +94,9 @@ def main() -> int:
             print(f"- {error}")
         return 1
     count = len(json.loads(API.read_text(encoding="utf-8"))["keywords"])
-    print(f"Real-hardware all-API suite validation PASSED: {count}/{count} keyword names accounted for")
+    print(
+        f"Real-hardware all-API suite validation PASSED: {count}/{count} keyword names accounted for"
+    )
     return 0
 
 

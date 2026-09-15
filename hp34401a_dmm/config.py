@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
-from .enums import AutoRange, AcFilterHz, Nplc
+from .enums import AutoRange, Nplc
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,10 +118,7 @@ class StabilityProfile:
             raise ValueError("max_stdev_ohm must be >= 0 when provided")
         if self.max_relative_stdev is not None and self.max_relative_stdev < 0:
             raise ValueError("max_relative_stdev must be >= 0 when provided")
-        if (
-            self.max_slope_relative_per_s is not None
-            and self.max_slope_relative_per_s < 0
-        ):
+        if self.max_slope_relative_per_s is not None and self.max_slope_relative_per_s < 0:
             raise ValueError("max_slope_relative_per_s must be >= 0 when provided")
 
 

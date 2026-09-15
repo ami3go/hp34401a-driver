@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from rf_hp34401a import Hp34401ALibrary
+from rf_hp34401a.exceptions import DriverTimeoutError
 
 
 def test_list_connections_preserves_last_failed_communication_result(monkeypatch):
@@ -16,7 +17,7 @@ def test_list_connections_preserves_last_failed_communication_result(monkeypatch
         raise TimeoutError("simulated communication failure")
 
     monkeypatch.setattr(session.driver, "query", fail_query)
-    with pytest.raises(Exception):
+    with pytest.raises(DriverTimeoutError):
         lib.check_communication("dut")
 
     state = lib.get_connection_state("dut", refresh=False)

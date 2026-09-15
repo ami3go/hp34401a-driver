@@ -100,9 +100,7 @@ def test_driver_information_metadata_capability_discovery_and_filters():
     assert metadata["state"] == "DISCONNECTED"
     assert lib.get_driver_capability_model("static")["source"]["connected"] is False
     assert lib.get_driver_capability("measure.voltage.dc", "static")["risk"] == "low"
-    assert lib.find_driver_capabilities(
-        capability_id="measure.", maximum_risk="low", mode="static"
-    )
+    assert lib.find_driver_capabilities(capability_id="measure.", maximum_risk="low", mode="static")
     assert lib.get_driver_features("static")["simulation"] is True
     assert lib.refresh_driver_capabilities("static")["validation"]["valid"] is True
     assert lib.validate_driver_capabilities()["valid"] is True
@@ -179,7 +177,10 @@ def test_configuration_manager_all_paths(tmp_path, monkeypatch):
         manager.validate(bad)
 
     applied = manager.apply(default)
-    assert applied["metadata"]["resolved_sources"]["settings.retry.max_query_retries"] == "RUNTIME_IMPORT"
+    assert (
+        applied["metadata"]["resolved_sources"]["settings.retry.max_query_retries"]
+        == "RUNTIME_IMPORT"
+    )
     text = json.dumps(default)
     assert manager.import_json(text, validate_only=True)["schema_id"]
     path = tmp_path / "profile.json"
@@ -197,7 +198,9 @@ def test_configuration_manager_all_paths(tmp_path, monkeypatch):
         manager.save_profile("profile_one")
     manager.save_profile("profile_one", overwrite=True)
     assert manager.list_profiles() == ["profile_one"]
-    assert manager.load_profile("profile_one", validate_only=True)["profile"]["name"] == "profile_one"
+    assert (
+        manager.load_profile("profile_one", validate_only=True)["profile"]["name"] == "profile_one"
+    )
     manager.delete_profile("profile_one")
     manager.delete_profile("profile_one")
     assert manager.list_profiles() == []
@@ -247,15 +250,17 @@ def test_plugin_provider_is_metadata_only():
     status = Hp34401APluginProvider.validate_environment()
     assert status["status"] in {"PASS", "FAIL"}
     assert {item["id"] for item in status["checks"]} == {
-        "python", "robotframework", "scpi-driver-core", "pyvisa", "pyserial"
+        "python",
+        "robotframework",
+        "scpi-driver-core",
+        "pyvisa",
+        "pyserial",
     }
     core = next(item for item in status["checks"] if item["id"] == "scpi-driver-core")
     assert core["required"] is True
     library = Hp34401APluginProvider.create_library()
     assert isinstance(library, Hp34401ALibrary)
-    configured = Hp34401APluginProvider.create_library(
-        library.get_driver_default_configuration()
-    )
+    configured = Hp34401APluginProvider.create_library(library.get_driver_default_configuration())
     assert configured.get_driver_configuration()["schema_id"] == "rf_hp34401a.configuration"
 
 

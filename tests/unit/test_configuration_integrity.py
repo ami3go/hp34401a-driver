@@ -10,7 +10,6 @@ import rf_hp34401a.configuration as configuration_module
 from rf_hp34401a.configuration import ConfigurationManager
 from rf_hp34401a.exceptions import DriverConfigurationError, DriverValidationError
 
-
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 RESOURCE_DIR = PACKAGE_ROOT / "rf_hp34401a" / "resources" / "configuration"
 

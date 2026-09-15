@@ -155,9 +155,7 @@ def _merge_public_api(surface: list[dict[str, Any]]) -> dict[str, Any]:
     return document
 
 
-def _merge_ai_contract(
-    public_api: dict[str, Any], surface: list[dict[str, Any]]
-) -> dict[str, Any]:
+def _merge_ai_contract(public_api: dict[str, Any], surface: list[dict[str, Any]]) -> dict[str, Any]:
     contract = _load_json_yaml(AI_PATH)
     existing = {str(item["keyword"]): item for item in contract.get("capabilities", [])}
     api_by_name = {str(item["name"]): item for item in public_api["keywords"]}
@@ -222,9 +220,7 @@ def main() -> int:
     API_PATH.write_text(public_text, encoding="utf-8")
 
     contract = _merge_ai_contract(public_api, surface)
-    AI_PATH.write_text(
-        yaml.safe_dump(contract, sort_keys=False, width=120), encoding="utf-8"
-    )
+    AI_PATH.write_text(yaml.safe_dump(contract, sort_keys=False, width=120), encoding="utf-8")
     _write_lock(public_api, surface)
     _write_device_operations(public_api)
     print(

@@ -30,16 +30,15 @@ import csv
 import datetime as _dt
 import queue
 import threading
-import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Literal, cast
 
 from hp34401a_dmm.config import DriverConfig, SerialRs232Config, StabilityProfile, VisaGpibConfig
 from hp34401a_dmm.driver import Hp34401A
 from hp34401a_dmm.enums import AcFilterHz, AutoRange, Nplc
 from hp34401a_dmm.errors import Hp34401AError
 from hp34401a_dmm.measurement import MeasurementReading
-
 
 NPLC_VALUES = {str(n.value).rstrip("0").rstrip("."): n for n in Nplc}
 RANGE_PRESETS: dict[str, list[str]] = {
@@ -108,7 +107,7 @@ def _list_visa_resources() -> list[str]:
     identified safely with the GUI's Identify button after connection.
     """
     try:
-        import pyvisa  # type: ignore[import-not-found]
+        import pyvisa
     except ImportError as exc:
         raise Hp34401AError(
             "pyvisa is not installed. Install the VISA extra or use the standalone build "
@@ -119,13 +118,13 @@ def _list_visa_resources() -> list[str]:
     try:
         rm = pyvisa.ResourceManager()
         resources = [str(r) for r in rm.list_resources()]
-    except Exception as exc:  # noqa: BLE001 - normalize optional backend failures for GUI
+    except Exception as exc:
         raise Hp34401AError(f"Could not list VISA resources: {exc}") from exc
     finally:
         if rm is not None:
             try:
                 rm.close()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - best-effort resource-manager cleanup
                 pass
 
     # Prefer real VISA instrument resources but fall back to all resources so
@@ -169,7 +168,7 @@ def main() -> int:
     try:
         import tkinter as tk
         from tkinter import filedialog, messagebox, ttk
-    except Exception as exc:  # pragma: no cover - environment dependent
+    except Exception as exc:  # noqa: BLE001 - pragma: no cover - environment dependent
         print(f"Tkinter GUI is not available in this Python environment: {exc}")
         return 2
 
@@ -217,7 +216,7 @@ def main() -> int:
             # Failure is non-fatal because serial-only PCs may not have VISA.
             self.root.after(300, self.refresh_visa_resources)
 
-        def _build_ui(self, ttk, tk, filedialog, messagebox) -> None:  # noqa: ANN001
+        def _build_ui(self, ttk, tk, filedialog, messagebox) -> None:
             self.filedialog = filedialog
             self.messagebox = messagebox
             self.root.columnconfigure(1, weight=1)
@@ -244,9 +243,15 @@ def main() -> int:
             self._combo(conn, "Parity", self.parity_var, ["none", "even", "odd"], 5)
             self._entry(conn, "Data bits", self.data_bits_var, 6)
             self._entry(conn, "Timeout s", self.timeout_var, 7)
-            ttk.Checkbutton(conn, text="Verify 34401A identity", variable=self.verify_identity_var).grid(row=8, column=0, columnspan=2, sticky="w")
-            ttk.Button(conn, text="Connect", command=self.connect).grid(row=9, column=0, sticky="ew", pady=3)
-            ttk.Button(conn, text="Disconnect", command=self.disconnect).grid(row=9, column=1, sticky="ew", pady=3)
+            ttk.Checkbutton(
+                conn, text="Verify 34401A identity", variable=self.verify_identity_var
+            ).grid(row=8, column=0, columnspan=2, sticky="w")
+            ttk.Button(conn, text="Connect", command=self.connect).grid(
+                row=9, column=0, sticky="ew", pady=3
+            )
+            ttk.Button(conn, text="Disconnect", command=self.disconnect).grid(
+                row=9, column=1, sticky="ew", pady=3
+            )
 
             status = ttk.LabelFrame(left, text="Instrument", padding=8)
             status.pack(fill="x", pady=(0, 8))
@@ -256,49 +261,95 @@ def main() -> int:
             self.status_label.pack(fill="x", pady=(4, 0))
             ttk.Button(status, text="Identify", command=self.identify).pack(fill="x", pady=2)
             ttk.Button(status, text="Self Test", command=self.self_test).pack(fill="x", pady=2)
-            ttk.Button(status, text="Clear Status (*CLS)", command=self.clear_status).pack(fill="x", pady=2)
-            ttk.Button(status, text="Drain Error Queue", command=self.drain_errors).pack(fill="x", pady=2)
-            ttk.Button(status, text="Query Terminals", command=self.query_terminals).pack(fill="x", pady=2)
+            ttk.Button(status, text="Clear Status (*CLS)", command=self.clear_status).pack(
+                fill="x", pady=2
+            )
+            ttk.Button(status, text="Drain Error Queue", command=self.drain_errors).pack(
+                fill="x", pady=2
+            )
+            ttk.Button(status, text="Query Terminals", command=self.query_terminals).pack(
+                fill="x", pady=2
+            )
 
             meas = ttk.LabelFrame(left, text="Measurement Setup", padding=8)
             meas.pack(fill="x", pady=(0, 8))
-            self.function_combo = self._combo(meas, "Function", self.function_var, list(RANGE_PRESETS), 0)
-            self.function_combo.bind("<<ComboboxSelected>>", lambda _e: self._update_range_choices())
-            self.range_combo = self._combo(meas, "Range", self.range_var, RANGE_PRESETS[self.function_var.get()], 1)
+            self.function_combo = self._combo(
+                meas, "Function", self.function_var, list(RANGE_PRESETS), 0
+            )
+            self.function_combo.bind(
+                "<<ComboboxSelected>>", lambda _e: self._update_range_choices()
+            )
+            self.range_combo = self._combo(
+                meas, "Range", self.range_var, RANGE_PRESETS[self.function_var.get()], 1
+            )
             self._combo(meas, "NPLC", self.nplc_var, ["0.02", "0.2", "1", "10", "100"], 2)
             self._combo(meas, "AC filter Hz", self.ac_filter_var, ["3", "20", "200"], 3)
             self._entry(meas, "Interval s", self.interval_var, 4)
-            ttk.Button(meas, text="Single Read", command=self.single_read).grid(row=5, column=0, sticky="ew", pady=3)
-            ttk.Button(meas, text="Start Continuous", command=self.start_continuous).grid(row=5, column=1, sticky="ew", pady=3)
-            ttk.Button(meas, text="Stop", command=self.stop_continuous).grid(row=6, column=0, columnspan=2, sticky="ew", pady=3)
-            ttk.Button(meas, text="BUS Trigger Read", command=self.bus_trigger_read).grid(row=7, column=0, columnspan=2, sticky="ew", pady=3)
+            ttk.Button(meas, text="Single Read", command=self.single_read).grid(
+                row=5, column=0, sticky="ew", pady=3
+            )
+            ttk.Button(meas, text="Start Continuous", command=self.start_continuous).grid(
+                row=5, column=1, sticky="ew", pady=3
+            )
+            ttk.Button(meas, text="Stop", command=self.stop_continuous).grid(
+                row=6, column=0, columnspan=2, sticky="ew", pady=3
+            )
+            ttk.Button(meas, text="BUS Trigger Read", command=self.bus_trigger_read).grid(
+                row=7, column=0, columnspan=2, sticky="ew", pady=3
+            )
 
             stable = ttk.LabelFrame(left, text="Stable Resistance", padding=8)
             stable.pack(fill="x")
             self._entry(stable, "Expected Ω", self.expected_ohm_var, 0)
             self._entry(stable, "Range Ω/AUTO", self.stable_range_var, 1)
-            ttk.Checkbutton(stable, text="4-wire", variable=self.stable_4w_var).grid(row=2, column=0, columnspan=2, sticky="w")
+            ttk.Checkbutton(stable, text="4-wire", variable=self.stable_4w_var).grid(
+                row=2, column=0, columnspan=2, sticky="w"
+            )
             self._entry(stable, "Min settle s", self.min_settle_var, 3)
             self._entry(stable, "Max wait s", self.max_wait_var, 4)
             self._entry(stable, "Rel stdev", self.rel_stdev_var, 5)
             self._entry(stable, "Rel slope/s", self.rel_slope_var, 6)
-            ttk.Button(stable, text="Read Stable Ω", command=self.read_stable).grid(row=7, column=0, columnspan=2, sticky="ew", pady=3)
+            ttk.Button(stable, text="Read Stable Ω", command=self.read_stable).grid(
+                row=7, column=0, columnspan=2, sticky="ew", pady=3
+            )
 
             display = tk.Frame(center, bg="#101610", bd=2, relief="sunken")
             display.grid(row=0, column=0, sticky="ew")
             display.columnconfigure(0, weight=1)
-            self.value_label = tk.Label(display, text="--.------", font=("Consolas", 58, "bold"), fg="#78ff78", bg="#101610", anchor="e")
+            self.value_label = tk.Label(
+                display,
+                text="--.------",
+                font=("Consolas", 58, "bold"),
+                fg="#78ff78",
+                bg="#101610",
+                anchor="e",
+            )
             self.value_label.grid(row=0, column=0, sticky="ew", padx=15, pady=(14, 0))
-            self.unit_label = tk.Label(display, text="", font=("Consolas", 26, "bold"), fg="#bfffbf", bg="#101610", anchor="w")
+            self.unit_label = tk.Label(
+                display,
+                text="",
+                font=("Consolas", 26, "bold"),
+                fg="#bfffbf",
+                bg="#101610",
+                anchor="w",
+            )
             self.unit_label.grid(row=0, column=1, sticky="w", padx=(0, 15), pady=(14, 0))
-            self.display_sub_label = tk.Label(display, text="Ready", font=("Consolas", 13), fg="#c8ffc8", bg="#101610", anchor="w")
-            self.display_sub_label.grid(row=1, column=0, columnspan=2, sticky="ew", padx=18, pady=(0, 10))
+            self.display_sub_label = tk.Label(
+                display, text="Ready", font=("Consolas", 13), fg="#c8ffc8", bg="#101610", anchor="w"
+            )
+            self.display_sub_label.grid(
+                row=1, column=0, columnspan=2, sticky="ew", padx=18, pady=(0, 10)
+            )
 
             logframe = ttk.LabelFrame(center, text="Logging", padding=8)
             logframe.grid(row=1, column=0, sticky="ew", pady=8)
             logframe.columnconfigure(1, weight=1)
-            ttk.Checkbutton(logframe, text="Enable CSV", variable=self.log_enabled_var).grid(row=0, column=0, sticky="w")
-            ttk.Entry(logframe, textvariable=self.log_path_var).grid(row=0, column=1, sticky="ew", padx=5)
+            ttk.Checkbutton(logframe, text="Enable CSV", variable=self.log_enabled_var).grid(
+                row=0, column=0, sticky="w"
+            )
+            ttk.Entry(logframe, textvariable=self.log_path_var).grid(
+                row=0, column=1, sticky="ew", padx=5
+            )
             ttk.Button(logframe, text="Browse", command=self.choose_log).grid(row=0, column=2)
 
             self.plot = tk.Canvas(center, height=210, bg="white", bd=1, relief="sunken")
@@ -307,19 +358,21 @@ def main() -> int:
             raw = ttk.LabelFrame(center, text="Raw SCPI / Event Log", padding=8)
             raw.grid(row=3, column=0, sticky="nsew")
             raw.columnconfigure(0, weight=1)
-            ttk.Entry(raw, textvariable=self.raw_command_var).grid(row=0, column=0, sticky="ew", padx=(0, 4))
+            ttk.Entry(raw, textvariable=self.raw_command_var).grid(
+                row=0, column=0, sticky="ew", padx=(0, 4)
+            )
             ttk.Button(raw, text="Query", command=self.raw_query).grid(row=0, column=1, padx=2)
             ttk.Button(raw, text="Write", command=self.raw_write).grid(row=0, column=2, padx=2)
             self.log_text = tk.Text(raw, height=10, wrap="word")
             self.log_text.grid(row=1, column=0, columnspan=3, sticky="nsew", pady=(6, 0))
 
-        def _entry(self, parent, label: str, var, row: int):  # noqa: ANN001
+        def _entry(self, parent, label: str, var, row: int):
             ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=2)
             ent = ttk.Entry(parent, textvariable=var, width=18)
             ent.grid(row=row, column=1, sticky="ew", pady=2)
             return ent
 
-        def _combo(self, parent, label: str, var, values: list[str], row: int):  # noqa: ANN001
+        def _combo(self, parent, label: str, var, values: list[str], row: int):
             ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=2)
             cb = ttk.Combobox(parent, textvariable=var, values=values, width=22)
             cb.grid(row=row, column=1, sticky="ew", pady=2)
@@ -337,16 +390,21 @@ def main() -> int:
                 raw_traffic_log=False,
             )
             if self.transport_var.get() == "Serial RS-232":
+                # The combobox is populated from exactly these three values, but it
+                # is editable, so SerialRs232Config.__post_init__ still validates the
+                # actual string at runtime; this cast only narrows it for mypy.
                 scfg = SerialRs232Config(
                     port=self.serial_port_var.get().strip(),
                     baudrate=int(self.baud_var.get()),
-                    parity=self.parity_var.get(),
+                    parity=cast(Literal["none", "even", "odd"], self.parity_var.get()),
                     data_bits=int(self.data_bits_var.get()),
                 )
                 return Hp34401A.from_serial(scfg, cfg)
             resource = _normalize_visa_resource(self.visa_resource_var.get())
             if not resource:
-                raise ValueError("VISA resource is empty. Click Refresh VISA list or enter a resource manually.")
+                raise ValueError(
+                    "VISA resource is empty. Click Refresh VISA list or enter a resource manually."
+                )
             vcfg = VisaGpibConfig(resource=resource)
             return Hp34401A.from_visa_gpib(vcfg, cfg)
 
@@ -364,6 +422,7 @@ def main() -> int:
                 finally:
                     self.state.worker_lock.release()
                     self.events.put(("busy", "Ready"))
+
             threading.Thread(target=run, daemon=True).start()
 
         def connect(self) -> None:
@@ -374,7 +433,10 @@ def main() -> int:
                 self.state.driver.connect()
                 ident = self.state.driver.identity_cached or self.state.driver.identify()
                 self.state.connected = True
-                return f"{ident.manufacturer} {ident.model} serial={ident.serial} fw={ident.firmware}"
+                return (
+                    f"{ident.manufacturer} {ident.model} serial={ident.serial} fw={ident.firmware}"
+                )
+
             self._worker("Connect", do)
 
         def disconnect(self) -> None:
@@ -384,6 +446,7 @@ def main() -> int:
                     self.state.driver.close()
                 self.state.connected = False
                 return "Disconnected"
+
             self._worker("Disconnect", do)
 
         def _require_driver(self) -> Hp34401A:
@@ -393,6 +456,7 @@ def main() -> int:
 
         def refresh_visa_resources(self) -> None:
             """Refresh the VISA resource combobox with resources visible to PyVISA."""
+
             def do() -> list[str]:
                 return _list_visa_resources()
 
@@ -407,7 +471,9 @@ def main() -> int:
             if resources:
                 self._log("VISA resources found: " + ", ".join(resources))
             else:
-                self._log("No VISA resources found. Verify NI-VISA/Keysight IO Libraries and adapter connection.")
+                self._log(
+                    "No VISA resources found. Verify NI-VISA/Keysight IO Libraries and adapter connection."
+                )
 
         def _measure(self) -> MeasurementReading:
             d = self._require_driver()
@@ -447,6 +513,7 @@ def main() -> int:
                 else:
                     raise ValueError(f"Unsupported BUS-trigger function: {func}")
                 return d.read_once_bus()
+
             self._worker("BUS Trigger Read", do)
 
         def start_continuous(self) -> None:
@@ -462,6 +529,7 @@ def main() -> int:
                         self.events.put(("error", ("Continuous", exc)))
                     self.state.continuous_stop.wait(max(0.05, interval))
                 return "Continuous stopped"
+
             self._worker("Continuous", loop)
 
         def stop_continuous(self) -> None:
@@ -471,7 +539,11 @@ def main() -> int:
         def read_stable(self) -> None:
             def do():
                 d = self._require_driver()
-                expected = float(self.expected_ohm_var.get()) if self.expected_ohm_var.get().strip() else None
+                expected = (
+                    float(self.expected_ohm_var.get())
+                    if self.expected_ohm_var.get().strip()
+                    else None
+                )
                 profile = StabilityProfile(
                     expected_ohm=expected,
                     range_ohm=_parse_range(self.stable_range_var.get()),
@@ -483,6 +555,7 @@ def main() -> int:
                     four_wire=self.stable_4w_var.get(),
                 )
                 return d.read_stable_resistance(profile)
+
             self._worker("Stable Resistance", do)
 
         def identify(self) -> None:
@@ -492,7 +565,12 @@ def main() -> int:
             self._worker("Self Test", lambda: self._require_driver().self_test())
 
         def clear_status(self) -> None:
-            self._worker("Clear Status", lambda: self._require_driver().clear_status() or "*CLS sent")
+            # clear_status() returns None; `or` substitutes a display string for the log.
+            self._worker(
+                "Clear Status",
+                lambda: self._require_driver().clear_status()  # type: ignore[func-returns-value]
+                or "*CLS sent",
+            )
 
         def drain_errors(self) -> None:
             self._worker("Drain Error Queue", lambda: self._require_driver().drain_error_queue())
@@ -506,7 +584,11 @@ def main() -> int:
 
         def raw_write(self) -> None:
             cmd = self.raw_command_var.get().strip()
-            self._worker(f"Write {cmd}", lambda: self._require_driver().write(cmd) or "OK")
+            # write() returns None; `or` substitutes a display string for the log.
+            self._worker(
+                f"Write {cmd}",
+                lambda: self._require_driver().write(cmd) or "OK",  # type: ignore[func-returns-value]
+            )
 
         def choose_log(self) -> None:
             name = self.filedialog.asksaveasfilename(
@@ -585,7 +667,9 @@ def main() -> int:
 
         def _draw_plot(self) -> None:
             self.plot.delete("all")
-            vals = [r.value for r in self.state.readings if r.value is not None and not r.is_overload]
+            vals = [
+                r.value for r in self.state.readings if r.value is not None and not r.is_overload
+            ]
             w = max(self.plot.winfo_width(), 50)
             h = max(self.plot.winfo_height(), 50)
             self.plot.create_rectangle(40, 15, w - 10, h - 25, outline="#cccccc")
@@ -607,7 +691,9 @@ def main() -> int:
             self.plot.create_text(45, h - 12, anchor="w", text=f"min {ymin:.5g}")
 
         def _log(self, text: str) -> None:
-            stamp = _dt.datetime.now().strftime("%H:%M:%S")
+            # astimezone() keeps the operator's local wall-clock display while
+            # attaching tzinfo (this stamp is never compared/stored, only shown).
+            stamp = _dt.datetime.now().astimezone().strftime("%H:%M:%S")
             self.log_text.insert("end", f"[{stamp}] {text}\n")
             self.log_text.see("end")
 
@@ -621,7 +707,7 @@ def main() -> int:
 
     try:
         root = tk.Tk()
-    except Exception as exc:  # pragma: no cover - display-server dependent
+    except Exception as exc:  # noqa: BLE001 - pragma: no cover - display-server dependent
         print(f"Could not start GUI. Is a desktop/display available? {exc}")
         return 2
     # Native ttk theme if available; default otherwise.
@@ -629,7 +715,7 @@ def main() -> int:
         style = ttk.Style(root)
         if "clam" in style.theme_names():
             style.theme_use("clam")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110 - cosmetic theme selection, must not block startup
         pass
     DmmGuiApp(root)
     root.mainloop()

@@ -122,77 +122,98 @@ ALIAS_OF = {
 
 
 # RFDS-002 v1.1 and RFDS-013/014 additions in release 26.06.
-RETURN_TYPES.update({
-    "Connect": "dictionary",
-    "Disconnect": "null",
-    "Is Connected": "boolean",
-    "Get Connection State": "dictionary",
-    "Check Communication": "boolean",
-    "Get Identity": "string",
-    "Get Driver Information": "dictionary",
-    "Get Driver Capabilities": "list",
-    "Set Communication Timeout": "float",
-    "Get Communication Timeout": "float",
-    "List Connections": "list",
-    "Select Connection": "dictionary",
-    "Disconnect All": "null",
-    "Get Active Connection": "string",
-    "Get Device Error": "dictionary",
-    "Get All Device Errors": "list",
-    "Clear Device Errors": "null",
-    "Device Error Queue Should Be Empty": "null",
-    "Reset Device": "dictionary",
-    "Get Driver Capability Model": "dictionary",
-    "Get Driver Capability": "dictionary",
-    "Find Driver Capabilities": "list",
-    "Get Driver Features": "dictionary",
-    "Refresh Driver Capabilities": "dictionary",
-    "Validate Driver Capabilities": "dictionary",
-    "Get Driver Configuration Schema": "dictionary",
-    "Get Driver Default Configuration": "dictionary",
-    "Get Driver Configuration": "dictionary",
-    "Validate Driver Configuration": "dictionary",
-    "Import Driver Configuration": "dictionary",
-    "Export Driver Configuration": "string",
-    "Save Driver Configuration": "string",
-    "Load Driver Configuration": "dictionary",
-    "List Driver Configuration Profiles": "list",
-    "Delete Driver Configuration Profile": "null",
-    "Reset Driver Configuration": "dictionary",
-    "Set Raw I/O Enabled": "boolean",
-    "Write Raw Command": "null",
-    "Query Raw Command": "string",
-    "Read Raw Response": "string",
-})
+RETURN_TYPES.update(
+    {
+        "Connect": "dictionary",
+        "Disconnect": "null",
+        "Is Connected": "boolean",
+        "Get Connection State": "dictionary",
+        "Check Communication": "boolean",
+        "Get Identity": "string",
+        "Get Driver Information": "dictionary",
+        "Get Driver Capabilities": "list",
+        "Set Communication Timeout": "float",
+        "Get Communication Timeout": "float",
+        "List Connections": "list",
+        "Select Connection": "dictionary",
+        "Disconnect All": "null",
+        "Get Active Connection": "string",
+        "Get Device Error": "dictionary",
+        "Get All Device Errors": "list",
+        "Clear Device Errors": "null",
+        "Device Error Queue Should Be Empty": "null",
+        "Reset Device": "dictionary",
+        "Get Driver Capability Model": "dictionary",
+        "Get Driver Capability": "dictionary",
+        "Find Driver Capabilities": "list",
+        "Get Driver Features": "dictionary",
+        "Refresh Driver Capabilities": "dictionary",
+        "Validate Driver Capabilities": "dictionary",
+        "Get Driver Configuration Schema": "dictionary",
+        "Get Driver Default Configuration": "dictionary",
+        "Get Driver Configuration": "dictionary",
+        "Validate Driver Configuration": "dictionary",
+        "Import Driver Configuration": "dictionary",
+        "Export Driver Configuration": "string",
+        "Save Driver Configuration": "string",
+        "Load Driver Configuration": "dictionary",
+        "List Driver Configuration Profiles": "list",
+        "Delete Driver Configuration Profile": "null",
+        "Reset Driver Configuration": "dictionary",
+        "Set Raw I/O Enabled": "boolean",
+        "Write Raw Command": "null",
+        "Query Raw Command": "string",
+        "Read Raw Response": "string",
+    }
+)
 
-NON_DEVICE.update({
-    "Is Connected", "Get Driver Information", "Get Driver Capabilities",
-    "Set Communication Timeout", "Get Communication Timeout", "List Connections",
-    "Select Connection", "Get Active Connection", "Get Driver Capability Model",
-    "Get Driver Capability", "Find Driver Capabilities", "Get Driver Features",
-    "Refresh Driver Capabilities", "Validate Driver Capabilities",
-    "Get Driver Configuration Schema", "Get Driver Default Configuration",
-    "Get Driver Configuration", "Validate Driver Configuration",
-    "Import Driver Configuration", "Export Driver Configuration",
-    "Save Driver Configuration", "Load Driver Configuration",
-    "List Driver Configuration Profiles", "Delete Driver Configuration Profile",
-    "Reset Driver Configuration", "Set Raw I/O Enabled",
-})
+NON_DEVICE.update(
+    {
+        "Is Connected",
+        "Get Driver Information",
+        "Get Driver Capabilities",
+        "Set Communication Timeout",
+        "Get Communication Timeout",
+        "List Connections",
+        "Select Connection",
+        "Get Active Connection",
+        "Get Driver Capability Model",
+        "Get Driver Capability",
+        "Find Driver Capabilities",
+        "Get Driver Features",
+        "Refresh Driver Capabilities",
+        "Validate Driver Capabilities",
+        "Get Driver Configuration Schema",
+        "Get Driver Default Configuration",
+        "Get Driver Configuration",
+        "Validate Driver Configuration",
+        "Import Driver Configuration",
+        "Export Driver Configuration",
+        "Save Driver Configuration",
+        "Load Driver Configuration",
+        "List Driver Configuration Profiles",
+        "Delete Driver Configuration Profile",
+        "Reset Driver Configuration",
+        "Set Raw I/O Enabled",
+    }
+)
 
-ALIAS_OF.update({
-    "Connect DMM": "Connect",
-    "Disconnect DMM": "Disconnect",
-    "Close DMM": "Disconnect",
-    "Close All DMMs": "Disconnect All",
-    "Select DMM": "Select Connection",
-    "Get Active DMM Alias": "Get Active Connection",
-    "Identify DMM": "Get Identity",
-    "Read DMM Error": "Get Device Error",
-    "Get DMM Error Queue": "Get All Device Errors",
-    "DMM Error Queue Should Be Empty": "Device Error Queue Should Be Empty",
-    "Write DMM Command": "Write Raw Command",
-    "Query DMM Command": "Query Raw Command",
-})
+ALIAS_OF.update(
+    {
+        "Connect DMM": "Connect",
+        "Disconnect DMM": "Disconnect",
+        "Close DMM": "Disconnect",
+        "Close All DMMs": "Disconnect All",
+        "Select DMM": "Select Connection",
+        "Get Active DMM Alias": "Get Active Connection",
+        "Identify DMM": "Get Identity",
+        "Read DMM Error": "Get Device Error",
+        "Get DMM Error Queue": "Get All Device Errors",
+        "DMM Error Queue Should Be Empty": "Device Error Queue Should Be Empty",
+        "Write DMM Command": "Write Raw Command",
+        "Query DMM Command": "Query Raw Command",
+    }
+)
 
 OPEN = [{"keyword": "Open Simulated DMM", "arguments": ["alias=dut", "reading=12.0"]}]
 MEASURED = OPEN + [{"keyword": "Measure DC Voltage", "arguments": [10, 10, "alias=dut"]}]
@@ -206,111 +227,469 @@ BUS_TRIGGERED = BUS_WAITING + [
 ]
 
 
-
 def _postprocess_v2604(vector: dict[str, Any], name: str) -> dict[str, Any]:
     """Add vectors for canonical RFDS-002/013/014 calls."""
     vector["canonical_keyword"] = ALIAS_OF.get(name, name)
     vector["expected_return"]["type"] = RETURN_TYPES.get(name, "null")
     vector["device_facing"] = name not in NON_DEVICE
-    vector["risk_class"] = "R2" if name in {
-        "Reset Device", "Write Raw Command", "Query Raw Command", "Read Raw Response",
-        "Write DMM Command", "Query DMM Command",
-    } else ("R1" if vector["device_facing"] else "R0")
+    vector["risk_class"] = (
+        "R2"
+        if name
+        in {
+            "Reset Device",
+            "Write Raw Command",
+            "Query Raw Command",
+            "Read Raw Response",
+            "Write DMM Command",
+            "Query DMM Command",
+        }
+        else ("R1" if vector["device_facing"] else "R0")
+    )
 
     if name == "Connect":
-        vector.update({
-            "factory": "visa",
-            "arguments": ["GPIB0::22::INSTR", "dut", 10.0, "transport=VISA"],
-            "expected_outbound": {"contains_in_order": ["*IDN?", "SYSTem:VERSion?", "SYSTem:ERRor?", "*CLS", "*IDN?"]},
-            "expected_inbound": {"response_required": True},
-            "expected_return": {"type": "dictionary", "required_keys": ["alias", "resource", "connected", "communication_ok", "transport", "identity", "timeout_s", "state", "simulated"]},
-        })
+        vector.update(
+            {
+                "factory": "visa",
+                "arguments": ["GPIB0::22::INSTR", "dut", 10.0, "transport=VISA"],
+                "expected_outbound": {
+                    "contains_in_order": [
+                        "*IDN?",
+                        "SYSTem:VERSion?",
+                        "SYSTem:ERRor?",
+                        "*CLS",
+                        "*IDN?",
+                    ]
+                },
+                "expected_inbound": {"response_required": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": [
+                        "alias",
+                        "resource",
+                        "connected",
+                        "communication_ok",
+                        "transport",
+                        "identity",
+                        "timeout_s",
+                        "state",
+                        "simulated",
+                    ],
+                },
+            }
+        )
     elif name == "Disconnect":
-        vector.update({
-            "factory": "serial",
-            "setup_calls": [{"keyword": "Open DMM Via Serial", "arguments": ["COM1", "alias=dut", "local_on_close=True"]}],
-            "arguments": ["dut"],
-            "expected_outbound": {"contains": ["SYSTem:LOCal"]},
-            "expected_inbound": {"no_response": True},
-        })
+        vector.update(
+            {
+                "factory": "serial",
+                "setup_calls": [
+                    {
+                        "keyword": "Open DMM Via Serial",
+                        "arguments": ["COM1", "alias=dut", "local_on_close=True"],
+                    }
+                ],
+                "arguments": ["dut"],
+                "expected_outbound": {"contains": ["SYSTem:LOCal"]},
+                "expected_inbound": {"no_response": True},
+            }
+        )
     elif name == "Is Connected":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut"], "expected_outbound": {"none": True}, "expected_return": {"type": "boolean", "exact": True}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut"],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "boolean", "exact": True},
+            }
+        )
     elif name == "Get Connection State":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut", True], "expected_outbound": {"contains": ["*IDN?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "dictionary", "required_keys": ["alias", "resource", "connected", "communication_ok", "transport", "identity", "timeout_s", "state", "simulated"]}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut", True],
+                "expected_outbound": {"contains": ["*IDN?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": [
+                        "alias",
+                        "resource",
+                        "connected",
+                        "communication_ok",
+                        "transport",
+                        "identity",
+                        "timeout_s",
+                        "state",
+                        "simulated",
+                    ],
+                },
+            }
+        )
     elif name == "Check Communication":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut"], "expected_outbound": {"contains": ["*IDN?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "boolean", "exact": True}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut"],
+                "expected_outbound": {"contains": ["*IDN?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {"type": "boolean", "exact": True},
+            }
+        )
     elif name == "Get Identity":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut", True], "expected_outbound": {"contains": ["*IDN?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "string", "contains": "34401A"}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut", True],
+                "expected_outbound": {"contains": ["*IDN?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {"type": "string", "contains": "34401A"},
+            }
+        )
     elif name == "Get Driver Information":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["name", "package_version", "api_version", "api_spec", "api_spec_version", "robot_framework_min_version", "python_min_version", "library_scope", "transport_types", "capability_ids", "simulation_supported", "identity_source"]}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": [
+                        "name",
+                        "package_version",
+                        "api_version",
+                        "api_spec",
+                        "api_spec_version",
+                        "robot_framework_min_version",
+                        "python_min_version",
+                        "library_scope",
+                        "transport_types",
+                        "capability_ids",
+                        "simulation_supported",
+                        "identity_source",
+                    ],
+                },
+            }
+        )
     elif name == "Get Driver Capabilities":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "list", "minimum_length": 1}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "list", "minimum_length": 1},
+            }
+        )
     elif name == "Set Communication Timeout":
-        vector.update({"setup_calls": OPEN, "arguments": [7.5, "dut"], "expected_outbound": {"none": True}, "expected_return": {"type": "float", "exact": 7.5}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": [7.5, "dut"],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "float", "exact": 7.5},
+            }
+        )
     elif name == "Get Communication Timeout":
-        vector.update({"setup_calls": OPEN + [{"keyword": "Set Communication Timeout", "arguments": [7.5, "dut"]}], "arguments": ["dut"], "expected_outbound": {"none": True}, "expected_return": {"type": "float", "exact": 7.5}})
+        vector.update(
+            {
+                "setup_calls": OPEN
+                + [{"keyword": "Set Communication Timeout", "arguments": [7.5, "dut"]}],
+                "arguments": ["dut"],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "float", "exact": 7.5},
+            }
+        )
     elif name == "List Connections":
-        vector.update({"setup_calls": OPEN, "expected_outbound": {"none": True}, "expected_return": {"type": "list", "minimum_length": 1}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "list", "minimum_length": 1},
+            }
+        )
     elif name == "Select Connection":
-        vector.update({"setup_calls": OPEN + [{"keyword": "Open Simulated DMM", "arguments": ["alias=second", "reading=13"]}], "arguments": ["dut"], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["alias", "connected"]}})
+        vector.update(
+            {
+                "setup_calls": OPEN
+                + [{"keyword": "Open Simulated DMM", "arguments": ["alias=second", "reading=13"]}],
+                "arguments": ["dut"],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "dictionary", "required_keys": ["alias", "connected"]},
+            }
+        )
     elif name == "Disconnect All":
-        vector.update({"factory": "serial", "setup_calls": [{"keyword": "Open DMM Via Serial", "arguments": ["COM1", "alias=dut", "local_on_close=True"]}], "expected_outbound": {"contains": ["SYSTem:LOCal"]}})
+        vector.update(
+            {
+                "factory": "serial",
+                "setup_calls": [
+                    {
+                        "keyword": "Open DMM Via Serial",
+                        "arguments": ["COM1", "alias=dut", "local_on_close=True"],
+                    }
+                ],
+                "expected_outbound": {"contains": ["SYSTem:LOCal"]},
+            }
+        )
     elif name == "Get Active Connection":
-        vector.update({"setup_calls": OPEN, "expected_outbound": {"none": True}, "expected_return": {"type": "string", "exact": "dut"}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "string", "exact": "dut"},
+            }
+        )
     elif name == "Get Device Error":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut"], "expected_outbound": {"contains": ["SYSTem:ERRor?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "dictionary", "required_keys": ["code", "message", "raw"]}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut"],
+                "expected_outbound": {"contains": ["SYSTem:ERRor?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["code", "message", "raw"],
+                },
+            }
+        )
     elif name == "Get All Device Errors":
-        vector.update({"setup_calls": OPEN, "arguments": [5, "dut"], "expected_outbound": {"contains": ["SYSTem:ERRor?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "list", "minimum_length": 1}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": [5, "dut"],
+                "expected_outbound": {"contains": ["SYSTem:ERRor?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {"type": "list", "minimum_length": 1},
+            }
+        )
     elif name in {"Clear Device Errors", "Device Error Queue Should Be Empty"}:
-        vector.update({"setup_calls": OPEN, "arguments": ["dut"], "expected_outbound": {"contains": ["SYSTem:ERRor?"]}, "expected_inbound": {"response_required": True}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut"],
+                "expected_outbound": {"contains": ["SYSTem:ERRor?"]},
+                "expected_inbound": {"response_required": True},
+            }
+        )
         if name == "Clear Device Errors":
             vector["expected_outbound"] = {"contains_in_order": ["*CLS", "SYSTem:ERRor?"]}
     elif name == "Reset Device":
-        vector.update({"setup_calls": OPEN, "arguments": ["dut", False], "expected_outbound": {"contains": ["*RST"]}, "expected_return": {"type": "dictionary", "required_keys": ["reset_type", "ready", "elapsed_s", "settings_cleared"]}})
+        vector.update(
+            {
+                "setup_calls": OPEN,
+                "arguments": ["dut", False],
+                "expected_outbound": {"contains": ["*RST"]},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["reset_type", "ready", "elapsed_s", "settings_cleared"],
+                },
+            }
+        )
     elif name == "Get Driver Capability Model":
-        vector.update({"arguments": ["static"], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["schema", "driver", "capabilities", "validation"]}})
+        vector.update(
+            {
+                "arguments": ["static"],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["schema", "driver", "capabilities", "validation"],
+                },
+            }
+        )
     elif name == "Get Driver Capability":
-        vector.update({"arguments": ["measure.voltage.dc", "static"], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["capability_id", "binding", "availability"]}})
+        vector.update(
+            {
+                "arguments": ["measure.voltage.dc", "static"],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["capability_id", "binding", "availability"],
+                },
+            }
+        )
     elif name == "Find Driver Capabilities":
-        vector.update({"arguments": ["measure.", None, "low", False, "static"], "expected_outbound": {"none": True}, "expected_return": {"type": "list", "minimum_length": 1}})
+        vector.update(
+            {
+                "arguments": ["measure.", None, "low", False, "static"],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "list", "minimum_length": 1},
+            }
+        )
     elif name == "Get Driver Features":
-        vector.update({"arguments": ["static"], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["measurement_functions", "multi_session"]}})
+        vector.update(
+            {
+                "arguments": ["static"],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["measurement_functions", "multi_session"],
+                },
+            }
+        )
     elif name == "Refresh Driver Capabilities":
-        vector.update({"arguments": ["static"], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["source", "capabilities"]}})
+        vector.update(
+            {
+                "arguments": ["static"],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["source", "capabilities"],
+                },
+            }
+        )
     elif name == "Validate Driver Capabilities":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["valid", "capability_count", "missing_keyword_bindings"]}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["valid", "capability_count", "missing_keyword_bindings"],
+                },
+            }
+        )
     elif name == "Get Driver Configuration Schema":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["$schema", "properties"]}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["$schema", "properties"],
+                },
+            }
+        )
     elif name == "Get Driver Default Configuration":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["rfds014_version", "settings"]}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["rfds014_version", "settings"],
+                },
+            }
+        )
     elif name == "Get Driver Configuration":
-        vector.update({"arguments": ["EFFECTIVE", None, True, True], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["profile", "settings", "metadata"]}})
+        vector.update(
+            {
+                "arguments": ["EFFECTIVE", None, True, True],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["profile", "settings", "metadata"],
+                },
+            }
+        )
     elif name == "Validate Driver Configuration":
-        vector.update({"arguments": ["config/default.json", True], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["valid", "configuration"]}})
+        vector.update(
+            {
+                "arguments": ["config/default.json", True],
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["valid", "configuration"],
+                },
+            }
+        )
     elif name == "Import Driver Configuration":
-        vector.update({"arguments": ["config/default.json", True, True], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["settings"]}})
+        vector.update(
+            {
+                "arguments": ["config/default.json", True, True],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "dictionary", "required_keys": ["settings"]},
+            }
+        )
     elif name == "Export Driver Configuration":
-        vector.update({"arguments": [None, 2], "expected_outbound": {"none": True}, "expected_return": {"type": "string", "contains": "rf_hp34401a.configuration"}})
+        vector.update(
+            {
+                "arguments": [None, 2],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "string", "contains": "rf_hp34401a.configuration"},
+            }
+        )
     elif name == "Save Driver Configuration":
-        vector.update({"profile_temp": True, "arguments": ["conformance", True], "expected_outbound": {"none": True}, "expected_return": {"type": "string", "contains": "conformance.json"}})
+        vector.update(
+            {
+                "profile_temp": True,
+                "arguments": ["conformance", True],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "string", "contains": "conformance.json"},
+            }
+        )
     elif name == "Load Driver Configuration":
-        vector.update({"profile_temp": True, "setup_calls": [{"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}], "arguments": ["conformance", False], "expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["settings"]}})
+        vector.update(
+            {
+                "profile_temp": True,
+                "setup_calls": [
+                    {"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}
+                ],
+                "arguments": ["conformance", False],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "dictionary", "required_keys": ["settings"]},
+            }
+        )
     elif name == "List Driver Configuration Profiles":
-        vector.update({"profile_temp": True, "setup_calls": [{"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}], "expected_outbound": {"none": True}, "expected_return": {"type": "list", "minimum_length": 1}})
+        vector.update(
+            {
+                "profile_temp": True,
+                "setup_calls": [
+                    {"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}
+                ],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "list", "minimum_length": 1},
+            }
+        )
     elif name == "Delete Driver Configuration Profile":
-        vector.update({"profile_temp": True, "setup_calls": [{"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}], "arguments": ["conformance"], "expected_outbound": {"none": True}})
+        vector.update(
+            {
+                "profile_temp": True,
+                "setup_calls": [
+                    {"keyword": "Save Driver Configuration", "arguments": ["conformance", True]}
+                ],
+                "arguments": ["conformance"],
+                "expected_outbound": {"none": True},
+            }
+        )
     elif name == "Reset Driver Configuration":
-        vector.update({"expected_outbound": {"none": True}, "expected_return": {"type": "dictionary", "required_keys": ["settings", "metadata"]}})
+        vector.update(
+            {
+                "expected_outbound": {"none": True},
+                "expected_return": {
+                    "type": "dictionary",
+                    "required_keys": ["settings", "metadata"],
+                },
+            }
+        )
     elif name == "Set Raw I/O Enabled":
-        vector.update({"arguments": [True], "expected_outbound": {"none": True}, "expected_return": {"type": "boolean", "exact": True}})
+        vector.update(
+            {
+                "arguments": [True],
+                "expected_outbound": {"none": True},
+                "expected_return": {"type": "boolean", "exact": True},
+            }
+        )
     elif name in {"Write Raw Command", "Write DMM Command"}:
-        vector.update({"setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}], "arguments": ["*CLS", "dut"], "expected_outbound": {"contains": ["*CLS"]}})
+        vector.update(
+            {
+                "setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}],
+                "arguments": ["*CLS", "dut"],
+                "expected_outbound": {"contains": ["*CLS"]},
+            }
+        )
     elif name in {"Query Raw Command", "Query DMM Command"}:
         args = ["*IDN?", "dut", 10.0] if name == "Query Raw Command" else ["*IDN?", "dut"]
-        vector.update({"setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}], "arguments": args, "expected_outbound": {"contains": ["*IDN?"]}, "expected_inbound": {"response_required": True}, "expected_return": {"type": "string", "contains": "34401A"}})
+        vector.update(
+            {
+                "setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}],
+                "arguments": args,
+                "expected_outbound": {"contains": ["*IDN?"]},
+                "expected_inbound": {"response_required": True},
+                "expected_return": {"type": "string", "contains": "34401A"},
+            }
+        )
     elif name == "Read Raw Response":
-        vector.update({"setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}], "arguments": ["dut", 10.0], "expected_outbound": {"none": True}, "expected_inbound": {"no_response": True}, "expected_return": {"type": "string"}})
+        vector.update(
+            {
+                "setup_calls": OPEN + [{"keyword": "Set Raw I/O Enabled", "arguments": [True]}],
+                "arguments": ["dut", 10.0],
+                "expected_outbound": {"none": True},
+                "expected_inbound": {"no_response": True},
+                "expected_return": {"type": "string"},
+            }
+        )
     return vector
+
 
 def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
     name = item["keyword"]
@@ -477,7 +856,13 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
         vector["arguments"] = ["dut"]
         vector["expected_outbound"] = {"contains": ["*IDN?"]}
         vector["expected_inbound"] = {"response_required": True}
-        vector["expected_return"]["required_keys"] = ["manufacturer", "model", "serial", "firmware", "raw"]
+        vector["expected_return"]["required_keys"] = [
+            "manufacturer",
+            "model",
+            "serial",
+            "firmware",
+            "raw",
+        ]
     elif name == "DMM Model Should Be 34401A":
         vector["arguments"] = ["dut"]
         vector["expected_outbound"] = {"contains": ["*IDN?"]}
@@ -531,17 +916,45 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
         vector["expected_return"]["minimum_length"] = 1
     elif name == "Get Driver Metadata":
         vector["arguments"] = ["dut"]
-        vector["expected_return"]["required_keys"] = ["driver_version", "core_driver_version", "state"]
+        vector["expected_return"]["required_keys"] = [
+            "driver_version",
+            "core_driver_version",
+            "state",
+        ]
     else:
         configure = {
-            "Configure DC Voltage": ([10, 10, "ON", "dut"], ["CONFigure:VOLTage:DC 10,DEF", "SENSe:VOLTage:DC:NPLCycles 10"]),
-            "Configure AC Voltage": ([10, 20, "dut"], ["CONFigure:VOLTage:AC 10,DEF", "SENSe:DETector:BANDwidth 20"]),
-            "Configure DC Current": ([1, 10, "ON", "dut"], ["CONFigure:CURRent:DC 1,DEF", "SENSe:CURRent:DC:NPLCycles 10"]),
-            "Configure AC Current": ([1, 20, "dut"], ["CONFigure:CURRent:AC 1,DEF", "SENSe:DETector:BANDwidth 20"]),
-            "Configure 2 Wire Resistance": ([1000, 10, "ON", "dut"], ["CONFigure:RESistance 1000,DEF", "SENSe:RESistance:NPLCycles 10"]),
-            "Configure 4 Wire Resistance": ([1000, 10, "ON", "dut"], ["CONFigure:FRESistance 1000,DEF", "SENSe:FRESistance:NPLCycles 10"]),
-            "Configure Frequency": ([10, 0.1, "dut"], ["CONFigure:FREQuency 10,DEF", "SENSe:FREQuency:APERture 0.1"]),
-            "Configure Period": ([10, 0.1, "dut"], ["CONFigure:PERiod 10,DEF", "SENSe:PERiod:APERture 0.1"]),
+            "Configure DC Voltage": (
+                [10, 10, "ON", "dut"],
+                ["CONFigure:VOLTage:DC 10,DEF", "SENSe:VOLTage:DC:NPLCycles 10"],
+            ),
+            "Configure AC Voltage": (
+                [10, 20, "dut"],
+                ["CONFigure:VOLTage:AC 10,DEF", "SENSe:DETector:BANDwidth 20"],
+            ),
+            "Configure DC Current": (
+                [1, 10, "ON", "dut"],
+                ["CONFigure:CURRent:DC 1,DEF", "SENSe:CURRent:DC:NPLCycles 10"],
+            ),
+            "Configure AC Current": (
+                [1, 20, "dut"],
+                ["CONFigure:CURRent:AC 1,DEF", "SENSe:DETector:BANDwidth 20"],
+            ),
+            "Configure 2 Wire Resistance": (
+                [1000, 10, "ON", "dut"],
+                ["CONFigure:RESistance 1000,DEF", "SENSe:RESistance:NPLCycles 10"],
+            ),
+            "Configure 4 Wire Resistance": (
+                [1000, 10, "ON", "dut"],
+                ["CONFigure:FRESistance 1000,DEF", "SENSe:FRESistance:NPLCycles 10"],
+            ),
+            "Configure Frequency": (
+                [10, 0.1, "dut"],
+                ["CONFigure:FREQuency 10,DEF", "SENSe:FREQuency:APERture 0.1"],
+            ),
+            "Configure Period": (
+                [10, 0.1, "dut"],
+                ["CONFigure:PERiod 10,DEF", "SENSe:PERiod:APERture 0.1"],
+            ),
             "Configure Continuity": (["dut"], ["CONFigure:CONTinuity"]),
             "Configure Diode": (["dut"], ["CONFigure:DIODe"]),
         }
@@ -563,7 +976,14 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
         elif name == "Read DMM":
             vector["setup_calls"] = CONFIGURED
             vector["arguments"] = ["dut"]
-            vector["expected_outbound"] = {"contains_in_order": ["TRIGger:SOURce IMMediate", "TRIGger:COUNt 1", "SAMPle:COUNt 1", "READ?"]}
+            vector["expected_outbound"] = {
+                "contains_in_order": [
+                    "TRIGger:SOURce IMMediate",
+                    "TRIGger:COUNt 1",
+                    "SAMPle:COUNt 1",
+                    "READ?",
+                ]
+            }
             vector["expected_inbound"] = {"response_required": True, "raw_contains": ["12.0"]}
         elif name in measurements:
             vector["arguments"], operation = measurements[name]
@@ -584,12 +1004,32 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
             vector["expected_outbound"] = {"contains": ["CONFigure:RESistance 100,DEF", "READ?"]}
             vector["expected_inbound"] = {"response_required": True, "raw_contains": ["12.0"]}
             if name.startswith("Try"):
-                vector["expected_return"]["required_keys"] = ["stable", "value", "samples", "elapsed_s"]
-        elif name in {"Get Last DMM Reading", "Get Last DMM Reading Value", "DMM Reading Should Be Valid", "DMM Reading Should Not Be Overload", "DMM Reading Should Be Between", "DMM Reading Should Be Close To", "DMM Reading Should Be Greater Than", "DMM Reading Should Be Less Than"}:
+                vector["expected_return"]["required_keys"] = [
+                    "stable",
+                    "value",
+                    "samples",
+                    "elapsed_s",
+                ]
+        elif name in {
+            "Get Last DMM Reading",
+            "Get Last DMM Reading Value",
+            "DMM Reading Should Be Valid",
+            "DMM Reading Should Not Be Overload",
+            "DMM Reading Should Be Between",
+            "DMM Reading Should Be Close To",
+            "DMM Reading Should Be Greater Than",
+            "DMM Reading Should Be Less Than",
+        }:
             vector["setup_calls"] = MEASURED
             if name == "Get Last DMM Reading":
                 vector["arguments"] = ["dut"]
-                vector["expected_return"]["required_keys"] = ["function", "value", "unit", "is_valid", "alias"]
+                vector["expected_return"]["required_keys"] = [
+                    "function",
+                    "value",
+                    "unit",
+                    "is_valid",
+                    "alias",
+                ]
             elif name == "Get Last DMM Reading Value":
                 vector["arguments"] = ["dut"]
                 vector["expected_return"]["exact"] = 12.0
@@ -611,9 +1051,13 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
         elif name == "Initiate DMM Measurement":
             vector["setup_calls"] = CONFIGURED
             vector["arguments"] = ["dut"]
-            vector["expected_outbound"] = {"contains_in_order": ['DATA:FEED RDG_STORE,"CALC"', "INITiate"]}
+            vector["expected_outbound"] = {
+                "contains_in_order": ['DATA:FEED RDG_STORE,"CALC"', "INITiate"]
+            }
         elif name == "Send DMM Bus Trigger":
-            vector["setup_calls"] = CONFIGURED + [{"keyword": "Set DMM Trigger Source", "arguments": ["BUS", "alias=dut"]}]
+            vector["setup_calls"] = CONFIGURED + [
+                {"keyword": "Set DMM Trigger Source", "arguments": ["BUS", "alias=dut"]}
+            ]
             vector["arguments"] = ["dut"]
             vector["expected_outbound"] = {"contains": ["*TRG"]}
         elif name == "Fetch DMM Readings":
@@ -625,7 +1069,18 @@ def vector_for(item: dict[str, Any], index: int) -> dict[str, Any]:
         elif name == "Read DMM Once With Bus Trigger":
             vector["setup_calls"] = CONFIGURED
             vector["arguments"] = ["dut"]
-            vector["expected_outbound"] = {"contains_in_order": ["TRIGger:SOURce BUS", "TRIGger:COUNt 1", "SAMPle:COUNt 1", 'DATA:FEED RDG_STORE,"CALC"', "INITiate", "*TRG", "FETCh?"], "forbidden": ["READ?"]}
+            vector["expected_outbound"] = {
+                "contains_in_order": [
+                    "TRIGger:SOURce BUS",
+                    "TRIGger:COUNt 1",
+                    "SAMPle:COUNt 1",
+                    'DATA:FEED RDG_STORE,"CALC"',
+                    "INITiate",
+                    "*TRG",
+                    "FETCh?",
+                ],
+                "forbidden": ["READ?"],
+            }
             vector["expected_inbound"] = {"response_required": True, "raw_contains": ["12.0"]}
         elif name == "Write DMM Command":
             vector["arguments"] = ["*CLS", "dut"]

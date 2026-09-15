@@ -21,9 +21,7 @@ class DmmSession:
     transport_kind: str = "UNKNOWN"
     timeout_s: float = 10.0
     options: dict[str, Any] = field(default_factory=dict)
-    connected_at_utc: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    connected_at_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     generation: int = 1
     identity_text: str | None = None
     last_reading: MeasurementReading | None = None
@@ -33,7 +31,7 @@ class DmmSession:
     def connected(self) -> bool:
         try:
             return bool(self.driver.is_connected())
-        except Exception:
+        except Exception:  # noqa: BLE001 - health probe must never raise
             return False
 
     def to_connection_state(
@@ -180,7 +178,7 @@ class SessionManager:
         for key, session in list(self._sessions.items()):
             try:
                 session.driver.close()
-            except Exception as exc:  # cleanup must continue
+            except Exception as exc:  # noqa: BLE001 - cleanup must continue for remaining sessions
                 errors.append(f"{session.alias}: {exc}")
             finally:
                 self._sessions.pop(key, None)

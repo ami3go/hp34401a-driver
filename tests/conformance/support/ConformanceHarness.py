@@ -11,20 +11,21 @@ import csv
 import json
 import os
 import platform
+import re
+import sys
+import tempfile
+import types
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-import re
-import sys
-import types
-import tempfile
-from typing import Any, Iterator
+from typing import Any
 
-import yaml
 import robot
+import yaml
 from robot.api.deco import keyword, library
-from robot.libraries.BuiltIn import BuiltIn
 from robot.libdocpkg import LibraryDocumentation
+from robot.libraries.BuiltIn import BuiltIn
 
 from hp34401a_dmm import DriverConfig, FakeTransport, Hp34401A
 from hp34401a_dmm.enums import TransportType
@@ -82,12 +83,16 @@ class ConformanceHarness:
                 f"{item.get('vector_id')} {item.get('keyword')}: {item.get('reason')}"
                 for item in failures[:10]
             )
-            raise AssertionError(f"RFDS-019 conformance failed ({len(failures)} failures): {details}")
+            raise AssertionError(
+                f"RFDS-019 conformance failed ({len(failures)} failures): {details}"
+            )
 
     def _load_yaml(self, path: Path) -> dict[str, Any]:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(loaded, dict):
-            raise AssertionError(f"Expected YAML mapping in {path}")
+            raise AssertionError(  # noqa: TRY004 - malformed file content, not a Python type error
+                f"Expected YAML mapping in {path}"
+            )
         return loaded
 
     def _actual_keywords(self) -> list[dict[str, Any]]:
@@ -167,6 +172,7 @@ class ConformanceHarness:
             }
 
         if factory in {"visa", "connect_visa"}:
+
             def visa_factory(
                 cls: type[Hp34401A], config: Any, driver_config: DriverConfig | None = None
             ) -> Hp34401A:
@@ -174,9 +180,10 @@ class ConformanceHarness:
                 transport.config = config  # type: ignore[attr-defined]
                 return cls(transport, driver_config or DriverConfig())
 
-            setattr(Hp34401A, "from_visa_gpib", classmethod(visa_factory))
+            Hp34401A.from_visa_gpib = classmethod(visa_factory)
 
         if factory == "serial":
+
             class SerialFakeTransport(FakeTransport):
                 _transport_type = TransportType.SERIAL_RS232
 
@@ -187,9 +194,10 @@ class ConformanceHarness:
                 transport.config = config  # type: ignore[attr-defined]
                 return cls(transport, driver_config or DriverConfig())
 
-            setattr(Hp34401A, "from_serial", classmethod(serial_factory))
+            Hp34401A.from_serial = classmethod(serial_factory)
 
         if vector.get("pyvisa_stub"):
+
             class ResourceManager:
                 def __init__(self, _library: str = "") -> None:
                     self.closed = False
@@ -209,12 +217,12 @@ class ConformanceHarness:
                 if "from_visa_gpib" in Hp34401A.__dict__:
                     delattr(Hp34401A, "from_visa_gpib")
             else:
-                setattr(Hp34401A, "from_visa_gpib", original_visa)
+                Hp34401A.from_visa_gpib = original_visa
             if original_serial is _unset:
                 if "from_serial" in Hp34401A.__dict__:
                     delattr(Hp34401A, "from_serial")
             else:
-                setattr(Hp34401A, "from_serial", original_serial)
+                Hp34401A.from_serial = original_serial
             if vector.get("pyvisa_stub"):
                 if original_pyvisa is None:
                     sys.modules.pop("pyvisa", None)
@@ -245,10 +253,10 @@ class ConformanceHarness:
     def _safe_close_all(self) -> None:
         try:
             self._built_in.run_keyword("Close All DMMs")
-        except Exception:
+        except Exception:  # noqa: BLE001 - falls back to direct close below
             try:
                 self._library.close()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - best-effort teardown between vectors
                 pass
 
     def _current_transports(self) -> list[Any]:
@@ -320,7 +328,7 @@ class ConformanceHarness:
                     }
                 )
                 self._record_trace(vector_id, keyword_name, outbound, inbound)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - any vector failure is recorded as a FAIL row
             result_row["reason"] = f"{type(exc).__name__}: {exc}"
         finally:
             self._results.append(result_row)
@@ -371,7 +379,7 @@ class ConformanceHarness:
                         "recovery_tested": bool(recovery),
                     }
                 )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - any vector failure is recorded as a FAIL row
             row["reason"] = f"{type(exc).__name__}: {exc}"
         finally:
             self._results.append(row)
@@ -406,19 +414,13 @@ class ConformanceHarness:
                 ) from exc
         for operation in expected.get("contains", []):
             if str(operation) not in outbound:
-                raise AssertionError(
-                    f"Missing protocol operation {operation!r}; actual={outbound}"
-                )
+                raise AssertionError(f"Missing protocol operation {operation!r}; actual={outbound}")
         for pattern in expected.get("contains_regex", []):
             if not any(re.fullmatch(str(pattern), command) for command in outbound):
-                raise AssertionError(
-                    f"No outbound command matched {pattern!r}; actual={outbound}"
-                )
+                raise AssertionError(f"No outbound command matched {pattern!r}; actual={outbound}")
         for forbidden in expected.get("forbidden", []):
             if str(forbidden) in outbound:
-                raise AssertionError(
-                    f"Forbidden protocol operation {forbidden!r} was transmitted"
-                )
+                raise AssertionError(f"Forbidden protocol operation {forbidden!r} was transmitted")
         if expected.get("none") and outbound:
             raise AssertionError(f"Expected no outbound protocol data; actual={outbound}")
         if "clear_count_min" in expected and clear_delta < int(expected["clear_count_min"]):
@@ -433,9 +435,7 @@ class ConformanceHarness:
         raw_values = [response for _, response in inbound]
         for raw in inbound_expected.get("raw_contains", []):
             if str(raw) not in raw_values:
-                raise AssertionError(
-                    f"Expected raw response {raw!r}; actual={raw_values}"
-                )
+                raise AssertionError(f"Expected raw response {raw!r}; actual={raw_values}")
 
     @classmethod
     def _verify_return(cls, expected: dict[str, Any], value: Any) -> None:
@@ -452,11 +452,14 @@ class ConformanceHarness:
             missing = set(expected.get("required_keys", [])) - set(value)
             if missing:
                 raise AssertionError(f"Return dictionary missing keys: {sorted(missing)}")
-        if isinstance(value, list) and expected.get("minimum_length") is not None:
-            if len(value) < int(expected["minimum_length"]):
-                raise AssertionError(
-                    f"Expected list length >= {expected['minimum_length']}, got {len(value)}"
-                )
+        if (
+            isinstance(value, list)
+            and expected.get("minimum_length") is not None
+            and len(value) < int(expected["minimum_length"])
+        ):
+            raise AssertionError(
+                f"Expected list length >= {expected['minimum_length']}, got {len(value)}"
+            )
 
     @staticmethod
     def _robot_type(value: Any) -> str:
@@ -484,9 +487,7 @@ class ConformanceHarness:
         inbound: list[tuple[str, str]],
     ) -> None:
         for index, operation in enumerate(outbound, 1):
-            self._outbound_lines.append(
-                f"{vector_id}\t{keyword_name}\t{index}\t{operation}"
-            )
+            self._outbound_lines.append(f"{vector_id}\t{keyword_name}\t{index}\t{operation}")
         for index, (operation, response) in enumerate(inbound, 1):
             self._inbound_lines.append(
                 f"{vector_id}\t{keyword_name}\t{index}\t{operation}\t{response}"
@@ -602,11 +603,21 @@ class ConformanceHarness:
                         "transport_type": "SCPI/FAKE" if device_facing else "N/A",
                         "protocol_vector": item.get("protocol_vector", ""),
                         "callability_tested": "Yes" if result else "No",
-                        "outbound_verified": "PASS" if device_facing and result.get("result") == "PASS" else "N/A" if not device_facing else "FAIL",
+                        "outbound_verified": (
+                            "PASS"
+                            if device_facing and result.get("result") == "PASS"
+                            else "N/A" if not device_facing else "FAIL"
+                        ),
                         "raw_response_verified": "PASS" if result.get("inbound") else "N/A",
-                        "parsed_result_verified": "PASS" if result.get("result") == "PASS" else "FAIL",
-                        "protocol_error_tested": "PASS" if self._error_tested(item["keyword"]) else "N/A",
-                        "recovery_tested": "PASS" if self._recovery_tested(item["keyword"]) else "N/A",
+                        "parsed_result_verified": (
+                            "PASS" if result.get("result") == "PASS" else "FAIL"
+                        ),
+                        "protocol_error_tested": (
+                            "PASS" if self._error_tested(item["keyword"]) else "N/A"
+                        ),
+                        "recovery_tested": (
+                            "PASS" if self._recovery_tested(item["keyword"]) else "N/A"
+                        ),
                         "result": result.get("result", "NOT RUN"),
                         "evidence": f"protocol_vector_results.json#{item.get('protocol_vector', '')}",
                         "reason": result.get("reason", ""),

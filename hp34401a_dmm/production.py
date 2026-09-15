@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import datetime as _dt
-from dataclasses import dataclass, field
-from typing import Callable
+from dataclasses import dataclass
 
 from .driver import Hp34401A
 from .enums import AutoRange, InputTerminal, MeasurementFunction, Nplc
 from .errors import Hp34401AError
-from .measurement import MeasurementReading, TestStepResult, TestSequenceResult
+from .measurement import MeasurementReading, TestSequenceResult, TestStepResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,9 +28,7 @@ class TestSequence:
     steps: tuple[TestStep, ...]
 
 
-def check_limits(
-    value: float | None, lower: float | None, upper: float | None
-) -> str:
+def check_limits(value: float | None, lower: float | None, upper: float | None) -> str:
     """Return PASS/FAIL for a numeric value against optional limits."""
     if value is None:
         return "FAIL"

@@ -7,8 +7,9 @@ import importlib.util
 import json
 import platform
 import sysconfig
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .version import __version__
 
@@ -86,7 +87,7 @@ class Hp34401APluginProvider:
 
     @classmethod
     def validate_environment(cls) -> dict[str, Any]:
-        checks = [
+        checks: list[dict[str, Any]] = [
             {"id": "python", "status": "PASS", "value": platform.python_version()},
             {
                 "id": "robotframework",

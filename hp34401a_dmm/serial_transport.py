@@ -60,5 +60,6 @@ class SerialRs232Transport(BaseTransport):
 
     def _do_clear(self) -> None:
         """RS-232 device clear: send Ctrl-C and flush buffers (spec 21.1/21.2)."""
-        self._core.write(CTRL_C.encode(self._encoding), timeout_s=self._timeout_s)
-        self._core.flush(FlushDirection.BOTH)
+        core = self._require_core()
+        core.write(CTRL_C.encode(self._encoding), timeout_s=self._timeout_s)
+        core.flush(FlushDirection.BOTH)

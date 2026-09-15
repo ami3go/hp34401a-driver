@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import csv
 import json
-import sys
 import os
 import platform
+import sys
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -151,7 +151,9 @@ class RealHardwareApiCoverage:
             merge_record(self._state_file or configured_state_path(), record)
 
     @keyword("Finalize Real Hardware API Coverage")
-    def finalize_real_hardware_api_coverage(self, fail_on_exclusions: bool = False) -> dict[str, Any]:
+    def finalize_real_hardware_api_coverage(
+        self, fail_on_exclusions: bool = False
+    ) -> dict[str, Any]:
         if self._output_dir is None:
             raise AssertionError("Start Real Hardware API Coverage was not called")
         persisted = load_results(self._state_file or configured_state_path())
@@ -193,8 +195,22 @@ class RealHardwareApiCoverage:
         (self._output_dir / "real_hardware_api_coverage.json").write_text(
             json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-        with (self._output_dir / "real_hardware_api_coverage.csv").open("w", encoding="utf-8", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=["keyword", "canonical_keyword", "status", "device_facing", "protocol_vector", "elapsed_ms", "message", "evidence"])
+        with (self._output_dir / "real_hardware_api_coverage.csv").open(
+            "w", encoding="utf-8", newline=""
+        ) as stream:
+            writer = csv.DictWriter(
+                stream,
+                fieldnames=[
+                    "keyword",
+                    "canonical_keyword",
+                    "status",
+                    "device_facing",
+                    "protocol_vector",
+                    "elapsed_ms",
+                    "message",
+                    "evidence",
+                ],
+            )
             writer.writeheader()
             writer.writerows(rows)
         environment = {
@@ -220,7 +236,9 @@ class RealHardwareApiCoverage:
             "",
             "EXCLUDED is not hardware proof. A D2/P1 claim requires rerunning with the missing prerequisites and zero exclusions for the claimed scope.",
         ]
-        (self._output_dir / "real_hardware_api_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (self._output_dir / "real_hardware_api_summary.md").write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
         failures = [row for row in rows if row["status"] in {"FAIL", "NOT RUN"}]
         if fail_on_exclusions:
             failures.extend(row for row in rows if row["status"] == "EXCLUDED")
@@ -239,13 +257,13 @@ class RealHardwareApiCoverage:
     ) -> None:
         """Fail only after the generated summary has been logged and persisted."""
         if not isinstance(summary, dict):
-            raise AssertionError("Real-hardware API summary must be a dictionary")
+            raise AssertionError(  # noqa: TRY004 - malformed file content, not a Python type error
+                "Real-hardware API summary must be a dictionary"
+            )
         failures = list(summary.get("failure_keywords", []))
         if not failures and bool(summary.get("acceptance_passed", False)):
             return
-        detail = "; ".join(
-            f"{item.get('keyword')}={item.get('status')}" for item in failures[:20]
-        )
+        detail = "; ".join(f"{item.get('keyword')}={item.get('status')}" for item in failures[:20])
         policy = "zero exclusions required" if fail_on_exclusions else "exclusions permitted"
         raise AssertionError(
             f"Real-hardware API coverage is incomplete ({policy}): {detail or 'unknown failure'}"

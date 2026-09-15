@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from .config import DriverConfig, SerialRs232Config, VisaGpibConfig
 from .enums import AutoRange, Nplc
@@ -23,7 +23,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     def add_transport(sp: argparse.ArgumentParser) -> None:
         g = sp.add_mutually_exclusive_group(required=True)
-        g.add_argument("--serial", metavar="PORT", help="RS-232 COM port, e.g. COM3 or /dev/ttyUSB0")
+        g.add_argument(
+            "--serial", metavar="PORT", help="RS-232 COM port, e.g. COM3 or /dev/ttyUSB0"
+        )
         g.add_argument("--visa", metavar="RESOURCE", help="VISA resource, e.g. GPIB0::22::INSTR")
         sp.add_argument("--baud", type=int, default=9600)
         sp.add_argument("--parity", choices=["none", "even", "odd"], default="none")
@@ -56,7 +58,10 @@ def _make_driver(args: argparse.Namespace):
     dcfg = DriverConfig(raw_traffic_log=args.verbose)
     if getattr(args, "serial", None):
         scfg = SerialRs232Config(
-            port=args.serial, baudrate=args.baud, parity=args.parity, data_bits=args.data_bits,
+            port=args.serial,
+            baudrate=args.baud,
+            parity=args.parity,
+            data_bits=args.data_bits,
             stop_bits=2,
         )
         return Hp34401A.from_serial(scfg, dcfg)

@@ -12,9 +12,10 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -104,7 +105,9 @@ class ConfigurationManager:
             )
         expected = str(lock.get("sha256") or "").strip().lower()
         if len(expected) != 64 or any(char not in "0123456789abcdef" for char in expected):
-            raise DriverConfigurationError("schema.lock sha256 must contain a 64-character hex digest")
+            raise DriverConfigurationError(
+                "schema.lock sha256 must contain a 64-character hex digest"
+            )
         try:
             actual = hashlib.sha256(self._schema_path.read_bytes()).hexdigest()
         except OSError as exc:
@@ -140,7 +143,9 @@ class ConfigurationManager:
         if errors:
             first = errors[0]
             path = ".".join(str(part) for part in first.absolute_path) or "<root>"
-            raise DriverValidationError(f"Configuration schema validation failed at {path}: {first.message}")
+            raise DriverValidationError(
+                f"Configuration schema validation failed at {path}: {first.message}"
+            )
 
         if data.get("rfds014_version") != _RFDS014_VERSION:
             raise DriverValidationError(
@@ -175,13 +180,15 @@ class ConfigurationManager:
         else:
             text = str(source).strip()
             try:
-                if text.startswith("{") or text.startswith("["):
+                if text.startswith(("{", "[")):
                     data = json.loads(text)
                 else:
                     path = Path(text).expanduser()
                     data = self._load_json(path) if path.exists() else json.loads(text)
             except (json.JSONDecodeError, OSError) as exc:
-                raise DriverConfigurationError(f"Invalid configuration JSON or path: {exc}") from exc
+                raise DriverConfigurationError(
+                    f"Invalid configuration JSON or path: {exc}"
+                ) from exc
         validated = self.validate(data, strict=strict)
         return validated if validate_only else self.apply(validated, strict=strict)
 
@@ -193,7 +200,10 @@ class ConfigurationManager:
     ) -> str:
         if isinstance(indent, bool) or int(indent) < 0 or int(indent) > 16:
             raise DriverValidationError("JSON indent must be an integer from 0 to 16")
-        text = json.dumps(self._effective, indent=int(indent), sort_keys=True, ensure_ascii=False) + "\n"
+        text = (
+            json.dumps(self._effective, indent=int(indent), sort_keys=True, ensure_ascii=False)
+            + "\n"
+        )
         if destination is not None:
             path = Path(destination).expanduser().resolve()
             path.parent.mkdir(parents=True, exist_ok=True)

@@ -9,12 +9,10 @@ from __future__ import annotations
 
 import statistics
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from .config import StabilityProfile
-from .enums import AutoRange, MeasurementFunction, Nplc
 from .measurement import MeasurementReading, StableMeasurementResult
-from . import parser
 
 
 def _linear_slope(times: list[float], values: list[float]) -> float:
@@ -72,9 +70,15 @@ def read_stable_resistance(
         if reading.is_overload:
             if profile.reject_overload:
                 return StableMeasurementResult(
-                    stable=False, value=None, unit=unit, samples=tuple(window_v),
-                    stdev=None, relative_stdev=None, slope_relative_per_s=None,
-                    elapsed_s=now() - t_start, reason="overload reading rejected",
+                    stable=False,
+                    value=None,
+                    unit=unit,
+                    samples=tuple(window_v),
+                    stdev=None,
+                    relative_stdev=None,
+                    slope_relative_per_s=None,
+                    elapsed_s=now() - t_start,
+                    reason="overload reading rejected",
                 )
         elif reading.value is not None:
             window_t.append(reading.monotonic_s)
@@ -95,16 +99,27 @@ def read_stable_resistance(
                 value = final_reading.value if not final_reading.is_overload else None
                 if value is None:
                     return StableMeasurementResult(
-                        stable=False, value=None, unit=unit, samples=tuple(window_v),
-                        stdev=metrics[0], relative_stdev=metrics[1],
-                        slope_relative_per_s=metrics[2], elapsed_s=now() - t_start,
+                        stable=False,
+                        value=None,
+                        unit=unit,
+                        samples=tuple(window_v),
+                        stdev=metrics[0],
+                        relative_stdev=metrics[1],
+                        slope_relative_per_s=metrics[2],
+                        elapsed_s=now() - t_start,
                         reason="final precision reading was overload",
                     )
                 return StableMeasurementResult(
-                    stable=True, value=value, unit=unit, samples=tuple(window_v),
-                    stdev=metrics[0], relative_stdev=metrics[1],
-                    slope_relative_per_s=metrics[2], elapsed_s=now() - t_start,
-                    reason="stable", reading=final_reading,
+                    stable=True,
+                    value=value,
+                    unit=unit,
+                    samples=tuple(window_v),
+                    stdev=metrics[0],
+                    relative_stdev=metrics[1],
+                    slope_relative_per_s=metrics[2],
+                    elapsed_s=now() - t_start,
+                    reason="stable",
+                    reading=final_reading,
                 )
 
         sleep(profile.sample_interval_s)
@@ -128,7 +143,11 @@ def _evaluate(
         profile.max_slope_relative_per_s is not None
         and rel_slope > profile.max_slope_relative_per_s
     ):
-        return False, f"rel_slope {rel_slope:.4g}/s > {profile.max_slope_relative_per_s:.4g}/s", metrics
+        return (
+            False,
+            f"rel_slope {rel_slope:.4g}/s > {profile.max_slope_relative_per_s:.4g}/s",
+            metrics,
+        )
     return True, "stable", metrics
 
 

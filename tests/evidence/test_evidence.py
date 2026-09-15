@@ -17,14 +17,17 @@ from pathlib import Path
 
 import pytest
 
-from rf_hp34401a import Hp34401ALibrary
 from hp34401a_dmm import evidence as evidence_module
+from rf_hp34401a import Hp34401ALibrary
+from rf_hp34401a.exceptions import RFDSDriverError
 
 _SCRIPTS_DIR = Path(__file__).parents[2] / "scripts"
 
 
 def _load_validator():
-    spec = importlib.util.spec_from_file_location("validate_evidence", _SCRIPTS_DIR / "validate_evidence.py")
+    spec = importlib.util.spec_from_file_location(
+        "validate_evidence", _SCRIPTS_DIR / "validate_evidence.py"
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -48,6 +51,7 @@ def lib(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Structure and manifest integrity
 # ---------------------------------------------------------------------------
+
 
 def test_disconnect_all_finalizes_a_complete_evidence_run(lib):
     library, tmp_path = lib
@@ -141,13 +145,15 @@ def test_manifest_lists_every_file_under_the_run_root(lib):
 # JSONL correctness: valid JSON, gap-free monotonic sequence per stream
 # ---------------------------------------------------------------------------
 
+
 def test_jsonl_streams_are_valid_and_gap_free(lib):
     library, tmp_path = lib
     library.measure_dc_voltage()
     library.measure_ac_voltage()
     try:
+        # Deliberately triggering a failed-operation evidence record.
         library.measure_dc_voltage(alias="does-not-exist")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     library.disconnect_all()
     root = _run_root(tmp_path)
@@ -165,7 +171,10 @@ def test_protocol_exchanges_are_tagged_with_transport(lib):
     library.measure_dc_voltage()
     library.disconnect_all()
     root = _run_root(tmp_path)
-    exchanges = [json.loads(line) for line in (root / "protocol" / "exchanges.jsonl").read_text().splitlines()]
+    exchanges = [
+        json.loads(line)
+        for line in (root / "protocol" / "exchanges.jsonl").read_text().splitlines()
+    ]
     assert exchanges
     assert all(entry["transport"] == "simulation" for entry in exchanges)
     assert all(entry["session_alias"] == "default" for entry in exchanges)
@@ -177,9 +186,14 @@ def test_nested_operations_share_one_correlation_id(lib):
     library, tmp_path = lib
     library.disconnect_all()
     root = _run_root(tmp_path)
-    operations = [json.loads(line) for line in (root / "events" / "operations.jsonl").read_text().splitlines()]
+    operations = [
+        json.loads(line) for line in (root / "events" / "operations.jsonl").read_text().splitlines()
+    ]
     connect_op = next(op for op in operations if op["capability"] == "Open Simulated DMM")
-    exchanges = [json.loads(line) for line in (root / "protocol" / "exchanges.jsonl").read_text().splitlines()]
+    exchanges = [
+        json.loads(line)
+        for line in (root / "protocol" / "exchanges.jsonl").read_text().splitlines()
+    ]
     assert any(exchange["correlation_id"] == connect_op["correlation_id"] for exchange in exchanges)
 
 
@@ -187,8 +201,11 @@ def test_nested_operations_share_one_correlation_id(lib):
 # Redaction
 # ---------------------------------------------------------------------------
 
+
 def test_redact_mapping_masks_sensitive_keys():
-    redacted = evidence_module.redact_mapping({"alias": "default", "password": "hunter2", "auth_token": "abc"})
+    redacted = evidence_module.redact_mapping(
+        {"alias": "default", "password": "hunter2", "auth_token": "abc"}
+    )
     assert redacted["alias"] == "default"
     assert redacted["password"] == {"value": "<REDACTED>", "redacted": True, "reason": "credential"}
     assert redacted["auth_token"]["redacted"] is True
@@ -200,29 +217,49 @@ def test_redaction_applies_to_operation_arguments(tmp_path, monkeypatch):
     exercising EvidenceRun.record_operation() directly."""
     monkeypatch.setenv("RFDS_EVIDENCE_ROOT", str(tmp_path / "results"))
     run = evidence_module.EvidenceRun(driver_id="rf_hp34401a", activity="session")
-    with run.record_operation("Test Capability", arguments={"alias": "dut", "api_token": "s3cr3t"}) as op:
+    with run.record_operation(
+        "Test Capability", arguments={"alias": "dut", "api_token": "s3cr3t"}
+    ) as op:
         op.set_result("ok")
     run.finalize(status="PASS")
-    operations = [json.loads(line) for line in (run.root / "events" / "operations.jsonl").read_text().splitlines()]
+    operations = [
+        json.loads(line)
+        for line in (run.root / "events" / "operations.jsonl").read_text().splitlines()
+    ]
     record = operations[0]
     assert record["arguments"]["alias"] == "dut"
-    assert record["arguments"]["api_token"] == {"value": "<REDACTED>", "redacted": True, "reason": "credential"}
+    assert record["arguments"]["api_token"] == {
+        "value": "<REDACTED>",
+        "redacted": True,
+        "reason": "credential",
+    }
 
 
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
 
+
 def test_error_is_recorded_with_traceback_and_category(lib):
     library, tmp_path = lib
-    with pytest.raises(Exception):
+    with pytest.raises(RFDSDriverError):
         library.select_dmm("does-not-exist")
     library.disconnect_all()
     root = _run_root(tmp_path)
-    errors = [json.loads(line) for line in (root / "events" / "errors.jsonl").read_text().splitlines()]
+    errors = [
+        json.loads(line) for line in (root / "events" / "errors.jsonl").read_text().splitlines()
+    ]
     assert len(errors) >= 1
     assert errors[0]["category"] in {
-        "VALIDATION", "STATE", "TIMEOUT", "CONNECTION", "PROTOCOL", "DEVICE", "CLEANUP", "UNSUPPORTED", "UNKNOWN",
+        "VALIDATION",
+        "STATE",
+        "TIMEOUT",
+        "CONNECTION",
+        "PROTOCOL",
+        "DEVICE",
+        "CLEANUP",
+        "UNSUPPORTED",
+        "UNKNOWN",
     }
     assert "Traceback" in errors[0]["traceback"]
 
@@ -230,6 +267,7 @@ def test_error_is_recorded_with_traceback_and_category(lib):
 # ---------------------------------------------------------------------------
 # NullEvidenceRun / evidence_enabled=False
 # ---------------------------------------------------------------------------
+
 
 def test_evidence_disabled_writes_nothing_to_disk(tmp_path, monkeypatch):
     monkeypatch.setenv("RFDS_EVIDENCE_ROOT", str(tmp_path / "results"))
@@ -252,8 +290,9 @@ def test_evidence_disabled_export_diagnostic_bundle_returns_none(tmp_path, monke
 # Export Diagnostic Bundle
 # ---------------------------------------------------------------------------
 
+
 def test_export_diagnostic_bundle_produces_a_readable_zip(lib):
-    library, tmp_path = lib
+    library, _tmp_path = lib
     library.measure_dc_voltage()
     bundle_path = library.export_diagnostic_bundle()
     assert bundle_path is not None
@@ -278,6 +317,7 @@ def test_export_diagnostic_bundle_honors_explicit_destination(lib):
 # ---------------------------------------------------------------------------
 # validate_evidence.py
 # ---------------------------------------------------------------------------
+
 
 def test_validate_evidence_script_accepts_a_clean_run(lib):
     library, tmp_path = lib

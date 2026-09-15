@@ -19,9 +19,7 @@ def test_invalid_assertion_limits_use_structured_validation_error():
         lib.dmm_reading_should_be_close_to(5.0, absolute_tolerance=-1)
 
     with pytest.raises(DriverValidationError):
-        lib.stable_resistance_should_be_between(
-            {"stable": True, "value": 5.0}, 10, 1
-        )
+        lib.stable_resistance_should_be_between({"stable": True, "value": 5.0}, 10, 1)
     lib.disconnect_all()
 
 

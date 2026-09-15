@@ -78,7 +78,9 @@ def effective_surface() -> list[dict[str, Any]]:
 
 
 def _load_legacy():
-    spec = importlib.util.spec_from_file_location("rf_hp34401a_legacy_conformance_generator", LEGACY)
+    spec = importlib.util.spec_from_file_location(
+        "rf_hp34401a_legacy_conformance_generator", LEGACY
+    )
     if spec is None or spec.loader is None:
         raise SystemExit(f"Cannot load reviewed generator {LEGACY}")
     module = importlib.util.module_from_spec(spec)
@@ -92,8 +94,7 @@ def check() -> list[str]:
     live = effective_surface()
     inventory = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
     existing = {
-        str(item["keyword"]): str(item["driver_method"])
-        for item in inventory.get("keywords", [])
+        str(item["keyword"]): str(item["driver_method"]) for item in inventory.get("keywords", [])
     }
     current = {item["keyword"]: item["driver_method"] for item in live}
     if set(existing) != set(current):

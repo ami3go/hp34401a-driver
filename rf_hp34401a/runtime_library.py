@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import math
 import platform
-from importlib.metadata import PackageNotFoundError, version as package_version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from typing import Any
 
 from robot.api.deco import keyword, library
@@ -22,7 +23,6 @@ from hp34401a_dmm import __version__ as CORE_VERSION
 
 from .converters import (
     as_bool,
-    as_float,
     as_int,
     as_nplc,
     as_optional_float,
@@ -30,8 +30,9 @@ from .converters import (
     as_seconds,
 )
 from .exceptions import DriverCleanupError, DriverStateError, DriverValidationError
-from .legacy_library import Hp34401ALibrary as _LegacyHp34401ALibrary
 from .legacy_library import ROBOT_FRAMEWORK_VERSION, _evidenced
+from .legacy_library import Hp34401ALibrary as _LegacyHp34401ALibrary
+from .sessions import DmmSession
 from .version import __version__
 
 
@@ -105,9 +106,12 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
 
         for alias in list(self._sessions.aliases()):
             session = self._sessions.get(alias)
-            self._execute(
-                "Apply Driver Configuration",
-                lambda s=session: s.driver.apply_runtime_policy(
+
+            # Bind `session` as a default argument (not a closure) so each call
+            # uses this iteration's session, not whatever the loop variable is
+            # by the time the callable runs.
+            def apply(s: DmmSession = session) -> None:
+                s.driver.apply_runtime_policy(
                     communication_timeout_s=communication_s,
                     self_test_timeout_s=self_test_s,
                     long_measurement_timeout_s=long_s,
@@ -118,9 +122,9 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
                         name="allow_calibration_commands",
                     ),
                     raw_traffic_log=as_bool(logging["raw_traffic"], name="raw_traffic"),
-                ),
-                session.alias,
-            )
+                )
+
+            self._execute("Apply Driver Configuration", apply, session.alias)
             session.timeout_s = communication_s
 
     @keyword("Import Driver Configuration", tags=["rfds:configuration", "rfds:low_risk"])
@@ -216,9 +220,7 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
             )
 
         if sources.get("settings.safety.allow_raw_scpi") != "PACKAGE_DEFAULT":
-            self._allow_raw_io = as_bool(
-                safety["allow_raw_scpi"], name="allow_raw_scpi"
-            )
+            self._allow_raw_io = as_bool(safety["allow_raw_scpi"], name="allow_raw_scpi")
 
         legacy_connect = _LegacyHp34401ALibrary.connect.__wrapped__
         state = legacy_connect(
@@ -243,18 +245,14 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
                     name="long_measurement_s",
                 ),
                 retry_queries=as_bool(retry["query_enabled"], name="query_enabled"),
-                max_query_retries=as_int(
-                    retry["max_query_retries"], name="max_query_retries"
-                ),
+                max_query_retries=as_int(retry["max_query_retries"], name="max_query_retries"),
                 allow_calibration_commands=as_bool(
                     safety["allow_calibration_commands"],
                     name="allow_calibration_commands",
                 ),
                 raw_traffic_log=as_bool(logging["raw_traffic"], name="raw_traffic"),
             )
-            session.timeout_s = as_seconds(
-                effective_timeout, name="communication_timeout_s"
-            )
+            session.timeout_s = as_seconds(effective_timeout, name="communication_timeout_s")
             expected_terminal = str(settings["device"]["expected_terminal"]).upper()
             if expected_terminal in {"FRONT", "REAR"}:
                 self.require_dmm_input_terminal(expected_terminal, alias)
@@ -351,9 +349,7 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
         session = self._session(alias)
         if timeout_s is not None:
             self.set_communication_timeout(timeout_s, session.alias)
-        return self._execute(
-            "Read Raw Response", session.driver.read_raw_response, session.alias
-        )
+        return self._execute("Read Raw Response", session.driver.read_raw_response, session.alias)
 
     @keyword("Get Driver Information", tags=["rfds:query", "rfds:low_risk"])
     @_evidenced
@@ -433,9 +429,7 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
             sample_interval_s=as_seconds(sample_interval, name="sample_interval"),
             window_size=as_int(window_size, name="window_size"),
             max_stdev_ohm=as_optional_float(max_stdev_ohm, name="max_stdev_ohm"),
-            max_relative_stdev=as_optional_float(
-                max_relative_stdev, name="max_relative_stdev"
-            ),
+            max_relative_stdev=as_optional_float(max_relative_stdev, name="max_relative_stdev"),
             max_slope_relative_per_s=as_optional_float(
                 max_slope_relative_per_s, name="max_slope_relative_per_s"
             ),
@@ -461,8 +455,8 @@ class Hp34401ALibrary(_LegacyHp34401ALibrary):
                     capability="Library Close",
                 )
             run.finalize(status="FAIL" if errors else "PASS")
-        except Exception:
-            # Listener cleanup must never mask the original Robot failure.
+        # Listener cleanup must never mask the original Robot failure.
+        except Exception:  # noqa: BLE001, S110
             pass
         finally:
             self._evidence = None

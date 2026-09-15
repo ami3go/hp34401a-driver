@@ -30,8 +30,9 @@ def test_listener_close_preserves_prior_failure_status(tmp_path, monkeypatch):
     lib = Hp34401ALibrary()
     lib.open_simulated_dmm(reading=1.0)
     try:
+        # Deliberately triggering a failed-operation evidence record.
         lib.select_dmm("missing")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     lib.close()
 

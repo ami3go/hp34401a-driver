@@ -23,8 +23,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_NAME = "rf_hp34401a"
 EXCLUDED_PARTS = {
-    ".git", ".venv", "__pycache__", ".pytest_cache", "build", "dist",
-    "results", "htmlcov", ".mypy_cache", ".ruff_cache", "site",
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    "build",
+    "dist",
+    "results",
+    "htmlcov",
+    ".mypy_cache",
+    ".ruff_cache",
+    "site",
 }
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".ttf", ".otf", ".woff", ".woff2", ".zip"}
 
@@ -73,21 +82,33 @@ def include(path: Path, root: Path) -> bool:
     rel = path.relative_to(root)
     if any(part in EXCLUDED_PARTS or part.endswith(".egg-info") for part in rel.parts):
         return False
-    if path.suffix.lower() in EXCLUDED_SUFFIXES or path.name in {".coverage"}:
-        return False
-    return True
+    return not (path.suffix.lower() in EXCLUDED_SUFFIXES or path.name in {".coverage"})
 
 
 def validate_layout(root: Path) -> None:
     required = [
-        "rf_hp34401a/library.py", "hp34401a_dmm", "api/public_api.yaml",
-        "capability/capability_model.yaml", "config/schema.json", "config/schema.lock",
-        "ai/hp34401a_ai_contract.yaml", "ai/hp34401a_ai_contract.lock",
-        f"history/v{RELEASE}.md", f"review/v{RELEASE}_code_review.md",
-        "examples/index.yaml", "scripts", "guide", "docs", "README.md", "pyproject.toml",
-        "release/release_manifest.yaml", "release/sbom.json",
-        "release/checksums.sha256", "release/requirements_traceability.csv",
-        "release/compatibility_report.json", "release/provenance.json",
+        "rf_hp34401a/library.py",
+        "hp34401a_dmm",
+        "api/public_api.yaml",
+        "capability/capability_model.yaml",
+        "config/schema.json",
+        "config/schema.lock",
+        "ai/hp34401a_ai_contract.yaml",
+        "ai/hp34401a_ai_contract.lock",
+        f"history/v{RELEASE}.md",
+        f"review/v{RELEASE}_code_review.md",
+        "examples/index.yaml",
+        "scripts",
+        "guide",
+        "docs",
+        "README.md",
+        "pyproject.toml",
+        "release/release_manifest.yaml",
+        "release/sbom.json",
+        "release/checksums.sha256",
+        "release/requirements_traceability.csv",
+        "release/compatibility_report.json",
+        "release/provenance.json",
         "tests/conformance/driver_call_protocol_conformance.robot",
         "tests/conformance/data/keyword_inventory.yaml",
         "tests/conformance/data/protocol_vectors.yaml",
@@ -110,8 +131,10 @@ def validate_zip(output: Path) -> None:
         if roots != {ROOT_NAME}:
             raise SystemExit(f"Invalid ZIP roots: {sorted(roots)}")
         forbidden = [
-            name for name in names
-            if "/src/" in f"/{name}" or Path(name).suffix.lower() in EXCLUDED_SUFFIXES
+            name
+            for name in names
+            if "/src/" in f"/{name}"
+            or Path(name).suffix.lower() in EXCLUDED_SUFFIXES
             or any(part in EXCLUDED_PARTS for part in Path(name).parts)
         ]
         if forbidden:
@@ -152,7 +175,7 @@ def _source_revision(root: Path) -> str:
         return subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=root, text=True, stderr=subprocess.DEVNULL
         ).strip()
-    except Exception:
+    except Exception:  # noqa: BLE001 - git metadata is best-effort for the release manifest
         return "UNKNOWN"
 
 
@@ -212,32 +235,80 @@ def main() -> int:
     if not args.skip_quality_gates:
         run(
             [
-                sys.executable, "-m", "pytest",
-                "--cov=rf_hp34401a", "--cov=hp34401a_dmm", "--cov-fail-under=80",
+                sys.executable,
+                "-m",
+                "pytest",
+                "--cov=rf_hp34401a",
+                "--cov=hp34401a_dmm",
+                "--cov-fail-under=80",
             ],
             root,
         )
         run([sys.executable, "scripts/run_call_protocol_conformance.py"], root)
         run([sys.executable, "-m", "robot", "--outputdir", "results/robot", "tests/robot"], root)
-        run([sys.executable, "-m", "robot", "--exclude", "hardware", "--outputdir", "results/examples", "examples"], root)
-        run([sys.executable, "-m", "robot.libdoc", "rf_hp34401a.Hp34401ALibrary", "generated/libdoc/Hp34401ALibrary.html"], root)
-        run([sys.executable, "-m", "robot.libdoc", "rf_hp34401a.Hp34401ALibrary", "generated/libdoc/Hp34401ALibrary.xml"], root)
+        run(
+            [
+                sys.executable,
+                "-m",
+                "robot",
+                "--exclude",
+                "hardware",
+                "--outputdir",
+                "results/examples",
+                "examples",
+            ],
+            root,
+        )
+        run(
+            [
+                sys.executable,
+                "-m",
+                "robot.libdoc",
+                "rf_hp34401a.Hp34401ALibrary",
+                "generated/libdoc/Hp34401ALibrary.html",
+            ],
+            root,
+        )
+        run(
+            [
+                sys.executable,
+                "-m",
+                "robot.libdoc",
+                "rf_hp34401a.Hp34401ALibrary",
+                "generated/libdoc/Hp34401ALibrary.xml",
+            ],
+            root,
+        )
         run([sys.executable, "-m", "mkdocs", "build", "--strict"], root)
 
     shutil.rmtree(root / "dist", ignore_errors=True)
     (root / "dist").mkdir()
-    run([sys.executable, "-m", "pip", "wheel", "--no-build-isolation", "--no-deps", "-w", "dist", "."], root)
-    run([
-        sys.executable,
-        "-c",
-        "from setuptools.build_meta import build_sdist; print(build_sdist('dist'))",
-    ], root)
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-build-isolation",
+            "--no-deps",
+            "-w",
+            "dist",
+            ".",
+        ],
+        root,
+    )
+    run(
+        [
+            sys.executable,
+            "-c",
+            "from setuptools.build_meta import build_sdist; print(build_sdist('dist'))",
+        ],
+        root,
+    )
     wheel = next((root / "dist").glob(f"rf_hp34401a-{DIST_VERSION}-*.whl"), None)
     sdist = next((root / "dist").glob(f"rf_hp34401a-{DIST_VERSION}.tar.gz"), None)
     if wheel is None or sdist is None:
-        raise SystemExit(
-            f"Expected {DIST_VERSION} wheel and source distribution were not built"
-        )
+        raise SystemExit(f"Expected {DIST_VERSION} wheel and source distribution were not built")
 
     generate_internal_checksums(root)
     output = output_dir / ZIP_NAME

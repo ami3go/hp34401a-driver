@@ -14,19 +14,42 @@ from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from .measurement import MeasurementReading, TestStepResult
+from .measurement import MeasurementReading
 
 _log = logging.getLogger("hp34401a_dmm.production")
 
 CSV_COLUMNS = [
-    "timestamp_utc", "monotonic_s", "station_id", "dut_id", "step_name",
-    "transport_type", "resource", "instrument_idn", "instrument_serial",
-    "software_version", "git_commit", "function", "value", "unit", "is_valid",
-    "is_overload", "was_retried", "retry_count", "reconnect_count",
-    "range_value", "nplc", "aperture_s", "terminal", "raw_response",
-    "pass_fail", "lower_limit", "upper_limit", "error_code", "error_message",
+    "timestamp_utc",
+    "monotonic_s",
+    "station_id",
+    "dut_id",
+    "step_name",
+    "transport_type",
+    "resource",
+    "instrument_idn",
+    "instrument_serial",
+    "software_version",
+    "git_commit",
+    "function",
+    "value",
+    "unit",
+    "is_valid",
+    "is_overload",
+    "was_retried",
+    "retry_count",
+    "reconnect_count",
+    "range_value",
+    "nplc",
+    "aperture_s",
+    "terminal",
+    "raw_response",
+    "pass_fail",
+    "lower_limit",
+    "upper_limit",
+    "error_code",
+    "error_message",
 ]
 
 

@@ -120,7 +120,13 @@ class CommandState(str, enum.Enum):
 VOLTAGE_DC_RANGES: Final[tuple[float, ...]] = (0.1, 1.0, 10.0, 100.0, 1000.0)
 VOLTAGE_AC_RANGES: Final[tuple[float, ...]] = (0.1, 1.0, 10.0, 100.0, 750.0)
 RESISTANCE_RANGES: Final[tuple[float, ...]] = (
-    100.0, 1e3, 10e3, 100e3, 1e6, 10e6, 100e6,
+    100.0,
+    1e3,
+    10e3,
+    100e3,
+    1e6,
+    10e6,
+    100e6,
 )
 CURRENT_DC_RANGES: Final[tuple[float, ...]] = (0.01, 0.1, 1.0, 3.0)
 CURRENT_AC_RANGES: Final[tuple[float, ...]] = (1.0, 3.0)

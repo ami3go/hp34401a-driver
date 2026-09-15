@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import os
-from pathlib import Path
 import subprocess
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

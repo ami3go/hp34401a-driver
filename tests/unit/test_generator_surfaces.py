@@ -6,7 +6,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "scripts"
 
@@ -29,9 +28,7 @@ def test_api_generator_uses_complete_effective_robot_surface():
 
 
 def test_conformance_generator_check_is_read_only_and_complete():
-    generator = _load(
-        "rf_hp34401a_generate_conformance", SCRIPTS / "generate_conformance_data.py"
-    )
+    generator = _load("rf_hp34401a_generate_conformance", SCRIPTS / "generate_conformance_data.py")
     assert generator.check() == []
     surface = generator.effective_surface()
     assert len(surface) == 109

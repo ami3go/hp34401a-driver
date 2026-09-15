@@ -38,8 +38,7 @@ def test_every_keyword_has_exactly_one_primary_vector():
     assert len({row["id"] for row in vectors}) == 109
     assert all(row.get("expected_return") is not None for row in vectors)
     assert all(
-        (not row["device_facing"]) or row.get("expected_outbound") is not None
-        for row in vectors
+        (not row["device_facing"]) or row.get("expected_outbound") is not None for row in vectors
     )
 
 

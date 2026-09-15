@@ -6,14 +6,13 @@ clear NotImplementedError rather than ship placeholder-only code.
 
 from __future__ import annotations
 
-from .config import SerialRs232Config
 from .transports import BaseTransport
 
 
 class PrologixUsbGpibTransport(BaseTransport):
     """Not yet implemented (Phase 3, experimental)."""
 
-    def __init__(self, *args: object, **kwargs: object) -> None:  # noqa: D401
+    def __init__(self, *args: object, **kwargs: object) -> None:
         raise NotImplementedError(
             "PrologixUsbGpibTransport is a Phase 3 experimental feature and is not "
             "implemented in this build. Use SerialRs232Transport or VisaGpibTransport. "

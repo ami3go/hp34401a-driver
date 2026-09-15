@@ -7,7 +7,6 @@ from jsonschema import Draft7Validator, FormatChecker
 
 from rf_hp34401a import Hp34401ALibrary
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas" / "evidence"
 
@@ -33,15 +32,20 @@ def test_finalized_evidence_matches_published_json_schemas(tmp_path, monkeypatch
     lib.open_simulated_dmm(alias="dut", reading=2.5)
     lib.measure_dc_voltage(alias="dut")
     try:
+        # Deliberately triggering a failed-operation evidence record.
         lib.select_dmm("missing")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
     lib.disconnect_all()
 
     root = _run_root(tmp_path)
     _validate("run_summary.schema.json", json.loads((root / "run_summary.json").read_text()))
-    _validate("device_identity.schema.json", json.loads((root / "device_identity.json").read_text()))
-    _validate("evidence_manifest.schema.json", json.loads((root / "evidence_manifest.json").read_text()))
+    _validate(
+        "device_identity.schema.json", json.loads((root / "device_identity.json").read_text())
+    )
+    _validate(
+        "evidence_manifest.schema.json", json.loads((root / "evidence_manifest.json").read_text())
+    )
 
     streams = [
         ("events/events.jsonl", "event.schema.json"),

@@ -45,10 +45,14 @@ def _check_manifest(root: Path, findings: list) -> None:
             continue
         actual_hash = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
         if actual_hash != entry["sha256"]:
-            findings.append(f"HASH MISMATCH: {rel} (manifest={entry['sha256']}, actual={actual_hash})")
+            findings.append(
+                f"HASH MISMATCH: {rel} (manifest={entry['sha256']}, actual={actual_hash})"
+            )
         actual_size = artifact_path.stat().st_size
         if actual_size != entry["size_bytes"]:
-            findings.append(f"SIZE MISMATCH: {rel} (manifest={entry['size_bytes']}, actual={actual_size})")
+            findings.append(
+                f"SIZE MISMATCH: {rel} (manifest={entry['size_bytes']}, actual={actual_size})"
+            )
 
     for path in sorted(root.rglob("*")):
         if path.is_dir():
@@ -75,7 +79,9 @@ def _check_jsonl_streams(root: Path, findings: list) -> None:
     for jsonl_path in sorted(root.rglob("*.jsonl")):
         rel = jsonl_path.relative_to(root)
         sequences = []
-        for line_number, line in enumerate(jsonl_path.read_text(encoding="utf-8").splitlines(), start=1):
+        for line_number, line in enumerate(
+            jsonl_path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
             if not line.strip():
                 continue
             try:
@@ -90,7 +96,9 @@ def _check_jsonl_streams(root: Path, findings: list) -> None:
             sequences.append(sequence)
         expected = list(range(1, len(sequences) + 1))
         if sequences != expected:
-            findings.append(f"{rel}: sequence numbers {sequences} are not a gap-free run starting at 1")
+            findings.append(
+                f"{rel}: sequence numbers {sequences} are not a gap-free run starting at 1"
+            )
 
 
 def validate(root: Path) -> list:

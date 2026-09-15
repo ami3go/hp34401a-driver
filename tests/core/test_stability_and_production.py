@@ -5,7 +5,6 @@ import datetime as dt
 import pytest
 
 from hp34401a_dmm import (
-    AutoRange,
     DriverConfig,
     FakeTransport,
     Hp34401A,
@@ -13,8 +12,8 @@ from hp34401a_dmm import (
     MeasurementFunction,
     Nplc,
     StabilityProfile,
-    TestStep,
     TestSequence,
+    TestStep,
     TransportType,
     check_limits,
     read_stable_resistance,
@@ -53,22 +52,40 @@ def test_stability_accepts_stable_data():
     def sleep(s):
         clock["t"] += s
 
-    samples = iter([1_000_000.0, 1_000_001.0, 999_999.0, 1_000_000.5, 999_999.5,
-                    1_000_000.0, 1_000_000.2])
+    samples = iter(
+        [1_000_000.0, 1_000_001.0, 999_999.0, 1_000_000.5, 999_999.5, 1_000_000.0, 1_000_000.2]
+    )
 
     def sampler():
         v = next(samples)
         r = _reading(v)
-        return MeasurementReading(**{**r.__dict__, "monotonic_s": now()}) if False else \
-            MeasurementReading(
-                timestamp_utc=r.timestamp_utc, monotonic_s=now(),
-                function=r.function, value=r.value, unit=r.unit, raw=r.raw,
-                is_overload=False, is_valid=True, transport=TransportType.FAKE)
+        return (
+            MeasurementReading(**{**r.__dict__, "monotonic_s": now()})
+            if False
+            else MeasurementReading(
+                timestamp_utc=r.timestamp_utc,
+                monotonic_s=now(),
+                function=r.function,
+                value=r.value,
+                unit=r.unit,
+                raw=r.raw,
+                is_overload=False,
+                is_valid=True,
+                transport=TransportType.FAKE,
+            )
+        )
 
-    profile = StabilityProfile(expected_ohm=1e6, range_ohm=1e6, window_size=5,
-                               min_settle_s=0.0, sample_interval_s=0.1, max_wait_s=10.0,
-                               final_nplc=None, max_relative_stdev=0.01,
-                               max_slope_relative_per_s=0.05)
+    profile = StabilityProfile(
+        expected_ohm=1e6,
+        range_ohm=1e6,
+        window_size=5,
+        min_settle_s=0.0,
+        sample_interval_s=0.1,
+        max_wait_s=10.0,
+        final_nplc=None,
+        max_relative_stdev=0.01,
+        max_slope_relative_per_s=0.05,
+    )
     result = read_stable_resistance(sampler, profile, now=now, sleep=sleep)
     assert result.stable is True
     assert result.value is not None
@@ -90,14 +107,28 @@ def test_stability_rejects_drifting_data():
         counter["n"] += 1
         v = 1_000_000.0 + counter["n"] * 50_000.0  # 5% per sample drift
         return MeasurementReading(
-            timestamp_utc=dt.datetime.now(dt.timezone.utc), monotonic_s=now(),
-            function=MeasurementFunction.RES_2W, value=v, unit="Ohm", raw=str(v),
-            is_overload=False, is_valid=True, transport=TransportType.FAKE)
+            timestamp_utc=dt.datetime.now(dt.timezone.utc),
+            monotonic_s=now(),
+            function=MeasurementFunction.RES_2W,
+            value=v,
+            unit="Ohm",
+            raw=str(v),
+            is_overload=False,
+            is_valid=True,
+            transport=TransportType.FAKE,
+        )
 
-    profile = StabilityProfile(expected_ohm=1e6, range_ohm=1e6, window_size=5,
-                               min_settle_s=0.0, sample_interval_s=0.1, max_wait_s=2.0,
-                               final_nplc=None, max_relative_stdev=0.0005,
-                               max_slope_relative_per_s=0.0005)
+    profile = StabilityProfile(
+        expected_ohm=1e6,
+        range_ohm=1e6,
+        window_size=5,
+        min_settle_s=0.0,
+        sample_interval_s=0.1,
+        max_wait_s=2.0,
+        final_nplc=None,
+        max_relative_stdev=0.0005,
+        max_slope_relative_per_s=0.0005,
+    )
     result = read_stable_resistance(sampler, profile, now=now, sleep=sleep)
     assert result.stable is False
     assert result.value is None
@@ -114,45 +145,68 @@ def test_check_limits():
 
 def _connected(responses=None):
     t = FakeTransport(responses=responses or {})
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+        ),
+    )
     d.connect()
     return d, t
 
 
 def test_run_measurement_step_pass():
-    d, t = _connected({"READ?": "+5.00000000E+00"})
-    step = TestStep(name="vout", function=MeasurementFunction.VOLT_DC,
-                    range_value=10.0, nplc=Nplc.PLC10, lower_limit=4.5, upper_limit=5.5)
+    d, _t = _connected({"READ?": "+5.00000000E+00"})
+    step = TestStep(
+        name="vout",
+        function=MeasurementFunction.VOLT_DC,
+        range_value=10.0,
+        nplc=Nplc.PLC10,
+        lower_limit=4.5,
+        upper_limit=5.5,
+    )
     result = run_measurement_step(d, step, dut_id="DUT001", station_id="LINE1")
     assert result.pass_fail == "PASS"
     assert result.reading.value == pytest.approx(5.0)
 
 
 def test_run_measurement_step_fail_on_overload():
-    d, t = _connected({"READ?": "9.90000000E+37"})
-    step = TestStep(name="vout", function=MeasurementFunction.VOLT_DC,
-                    range_value=10.0, lower_limit=4.5, upper_limit=5.5)
+    d, _t = _connected({"READ?": "9.90000000E+37"})
+    step = TestStep(
+        name="vout",
+        function=MeasurementFunction.VOLT_DC,
+        range_value=10.0,
+        lower_limit=4.5,
+        upper_limit=5.5,
+    )
     result = run_measurement_step(d, step, dut_id="DUT001", station_id="LINE1")
     assert result.pass_fail == "FAIL"  # overload -> FAIL, not fabricated
 
 
 def test_terminal_mismatch_fails_safely():
-    d, t = _connected({"READ?": "+5.0E+00", "ROUTe:TERMinals?": "FRON"})
-    step = TestStep(name="vout", function=MeasurementFunction.VOLT_DC,
-                    range_value=10.0, required_terminal=InputTerminal.REAR)
+    d, _t = _connected({"READ?": "+5.0E+00", "ROUTe:TERMinals?": "FRON"})
+    step = TestStep(
+        name="vout",
+        function=MeasurementFunction.VOLT_DC,
+        range_value=10.0,
+        required_terminal=InputTerminal.REAR,
+    )
     result = run_measurement_step(d, step, dut_id="DUT001", station_id="LINE1")
     assert result.pass_fail == "ERROR"
     assert "terminal" in (result.error or "").lower()
 
 
 def test_sequence_aggregates_worst_result():
-    d, t = _connected({"READ?": "+5.00000000E+00"})
-    seq = TestSequence(name="seq", steps=(
-        TestStep("a", MeasurementFunction.VOLT_DC, 10.0, lower_limit=4.0, upper_limit=6.0),
-        TestStep("b", MeasurementFunction.VOLT_DC, 10.0, lower_limit=9.0, upper_limit=10.0),
-    ))
+    d, _t = _connected({"READ?": "+5.00000000E+00"})
+    seq = TestSequence(
+        name="seq",
+        steps=(
+            TestStep("a", MeasurementFunction.VOLT_DC, 10.0, lower_limit=4.0, upper_limit=6.0),
+            TestStep("b", MeasurementFunction.VOLT_DC, 10.0, lower_limit=9.0, upper_limit=10.0),
+        ),
+    )
     result = run_sequence(d, seq, "DUT1", "LINE1")
     assert result.pass_fail == "FAIL"  # second step out of limits
 
@@ -165,6 +219,7 @@ def test_error_code_mapping_ranges():
 
 def test_cli_help_needs_no_hardware():
     from hp34401a_dmm import cli
+
     parser = cli._build_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["--help"])
@@ -176,9 +231,14 @@ def test_cli_measure_dc_voltage_runs_with_fake(monkeypatch):
 
     def fake_make_driver(args):
         t = FakeTransport(responses={"READ?": "+3.30000000E+00"})
-        return Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                        drain_error_queue_on_connect=False,
-                                        clear_status_on_connect=False))
+        return Hp34401A(
+            t,
+            DriverConfig(
+                verify_identity_on_connect=False,
+                drain_error_queue_on_connect=False,
+                clear_status_on_connect=False,
+            ),
+        )
 
     monkeypatch.setattr(cli, "_make_driver", fake_make_driver)
     rc = cli.main(["measure", "dc-voltage", "--visa", "GPIB0::22::INSTR", "--range", "10"])
@@ -200,9 +260,14 @@ def test_cli_invalid_range_returns_clean_error(monkeypatch, capsys):
 
     def fake_make_driver(args):
         t = FakeTransport(responses={"READ?": "+3.30000000E+00"})
-        return Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                        drain_error_queue_on_connect=False,
-                                        clear_status_on_connect=False))
+        return Hp34401A(
+            t,
+            DriverConfig(
+                verify_identity_on_connect=False,
+                drain_error_queue_on_connect=False,
+                clear_status_on_connect=False,
+            ),
+        )
 
     monkeypatch.setattr(cli, "_make_driver", fake_make_driver)
     rc = cli.main(["measure", "dc-voltage", "--visa", "GPIB0::22::INSTR", "--range", "7"])

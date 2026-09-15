@@ -34,7 +34,7 @@ def main() -> int:
             [str(python), "-m", "pip", "install", "--no-deps", str(wheel)],
             check=True,
         )
-        code = r'''
+        code = r"""
 from pathlib import Path
 from importlib.metadata import entry_points
 from rf_hp34401a.plugin import Hp34401APluginProvider
@@ -51,7 +51,7 @@ descriptor = provider.get_descriptor()
 for name, path in descriptor["resolved_artifacts"].items():
     assert Path(path).is_file(), f"{name}: {path}"
 print("Installed wheel plugin/resource validation PASS")
-'''
+"""
         subprocess.run([str(python), "-c", code], check=True, cwd=tmp)
     return 0
 

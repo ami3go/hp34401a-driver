@@ -3,53 +3,258 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Any
 
 from .exceptions import DriverValidationError
 from .version import __version__
 
-
 _RFDS002_CAPABILITY_IDS = [
-    "ac_current_measurement", "ac_voltage_measurement", "capability_discovery",
-    "configuration", "connection", "continuity_measurement", "dc_current_measurement",
-    "dc_voltage_measurement", "device_reset", "diagnostics", "diode_measurement",
-    "error_queue", "four_wire_resistance_measurement", "frequency_measurement",
-    "identity", "measurement_assertions", "multi_connection", "period_measurement",
-    "raw_io", "self_test", "simulation", "stable_resistance_measurement",
-    "terminal_verification", "triggered_acquisition", "two_wire_resistance_measurement",
+    "ac_current_measurement",
+    "ac_voltage_measurement",
+    "capability_discovery",
+    "configuration",
+    "connection",
+    "continuity_measurement",
+    "dc_current_measurement",
+    "dc_voltage_measurement",
+    "device_reset",
+    "diagnostics",
+    "diode_measurement",
+    "error_queue",
+    "four_wire_resistance_measurement",
+    "frequency_measurement",
+    "identity",
+    "measurement_assertions",
+    "multi_connection",
+    "period_measurement",
+    "raw_io",
+    "self_test",
+    "simulation",
+    "stable_resistance_measurement",
+    "terminal_verification",
+    "triggered_acquisition",
+    "two_wire_resistance_measurement",
 ]
 
 # Retry safety is an operation property, not a risk-level inference.  Timeout
 # values below describe the default operation envelope exposed to planners;
 # the effective session timeout can still be configured at runtime.
 _CAPABILITIES: list[dict[str, Any]] = [
-    {"capability_id": "connection.session.open", "keyword": "Connect", "risk": "low", "requires_connection": False, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "connection.session.close", "keyword": "Disconnect", "risk": "low", "requires_connection": False, "timeout_s": 10.0, "retry_safe": True},
-    {"capability_id": "connection.session.inspect", "keyword": "Get Connection State", "risk": "none", "requires_connection": False, "timeout_s": 10.0, "retry_safe": True},
-    {"capability_id": "identity.device.read", "keyword": "Get Identity", "risk": "none", "requires_connection": True, "timeout_s": 10.0, "retry_safe": True},
-    {"capability_id": "system.communication.check", "keyword": "Check Communication", "risk": "none", "requires_connection": True, "timeout_s": 10.0, "retry_safe": True},
-    {"capability_id": "system.error.read", "keyword": "Get Device Error", "risk": "none", "requires_connection": True, "timeout_s": 10.0, "retry_safe": True},
-    {"capability_id": "system.error.clear", "keyword": "Clear Device Errors", "risk": "low", "requires_connection": True, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "system.self_test.execute", "keyword": "Run DMM Self Test", "risk": "medium", "requires_connection": True, "timeout_s": 30.0, "retry_safe": False},
-    {"capability_id": "measure.voltage.dc", "keyword": "Measure DC Voltage", "risk": "low", "requires_connection": True, "unit": "V", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.voltage.ac", "keyword": "Measure AC Voltage", "risk": "low", "requires_connection": True, "unit": "V", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.current.dc", "keyword": "Measure DC Current", "risk": "low", "requires_connection": True, "unit": "A", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.current.ac", "keyword": "Measure AC Current", "risk": "low", "requires_connection": True, "unit": "A", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.resistance.two_wire", "keyword": "Measure 2 Wire Resistance", "risk": "low", "requires_connection": True, "unit": "ohm", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.resistance.four_wire", "keyword": "Measure 4 Wire Resistance", "risk": "low", "requires_connection": True, "unit": "ohm", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.frequency", "keyword": "Measure Frequency", "risk": "low", "requires_connection": True, "unit": "Hz", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.period", "keyword": "Measure Period", "risk": "low", "requires_connection": True, "unit": "s", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.continuity", "keyword": "Measure Continuity", "risk": "low", "requires_connection": True, "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.diode", "keyword": "Measure Diode", "risk": "low", "requires_connection": True, "unit": "V", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "measure.resistance.stable", "keyword": "Read Stable Resistance", "risk": "low", "requires_connection": True, "unit": "ohm", "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "acquisition.trigger.configure", "keyword": "Set DMM Trigger Source", "risk": "low", "requires_connection": True, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "acquisition.trigger.initiate", "keyword": "Initiate DMM Measurement", "risk": "low", "requires_connection": True, "timeout_s": 60.0, "retry_safe": False},
-    {"capability_id": "acquisition.trigger.bus", "keyword": "Send DMM Bus Trigger", "risk": "low", "requires_connection": True, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "protocol.scpi.raw_write", "keyword": "Write DMM Command", "risk": "high", "requires_connection": True, "explicit_opt_in": True, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "protocol.scpi.raw_query", "keyword": "Query DMM Command", "risk": "medium", "requires_connection": True, "explicit_opt_in": True, "timeout_s": 10.0, "retry_safe": False},
-    {"capability_id": "simulation.instrument.open", "keyword": "Open Simulated DMM", "risk": "none", "requires_connection": False, "timeout_s": 10.0, "retry_safe": False},
+    {
+        "capability_id": "connection.session.open",
+        "keyword": "Connect",
+        "risk": "low",
+        "requires_connection": False,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "connection.session.close",
+        "keyword": "Disconnect",
+        "risk": "low",
+        "requires_connection": False,
+        "timeout_s": 10.0,
+        "retry_safe": True,
+    },
+    {
+        "capability_id": "connection.session.inspect",
+        "keyword": "Get Connection State",
+        "risk": "none",
+        "requires_connection": False,
+        "timeout_s": 10.0,
+        "retry_safe": True,
+    },
+    {
+        "capability_id": "identity.device.read",
+        "keyword": "Get Identity",
+        "risk": "none",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": True,
+    },
+    {
+        "capability_id": "system.communication.check",
+        "keyword": "Check Communication",
+        "risk": "none",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": True,
+    },
+    {
+        "capability_id": "system.error.read",
+        "keyword": "Get Device Error",
+        "risk": "none",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": True,
+    },
+    {
+        "capability_id": "system.error.clear",
+        "keyword": "Clear Device Errors",
+        "risk": "low",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "system.self_test.execute",
+        "keyword": "Run DMM Self Test",
+        "risk": "medium",
+        "requires_connection": True,
+        "timeout_s": 30.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.voltage.dc",
+        "keyword": "Measure DC Voltage",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "V",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.voltage.ac",
+        "keyword": "Measure AC Voltage",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "V",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.current.dc",
+        "keyword": "Measure DC Current",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "A",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.current.ac",
+        "keyword": "Measure AC Current",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "A",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.resistance.two_wire",
+        "keyword": "Measure 2 Wire Resistance",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "ohm",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.resistance.four_wire",
+        "keyword": "Measure 4 Wire Resistance",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "ohm",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.frequency",
+        "keyword": "Measure Frequency",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "Hz",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.period",
+        "keyword": "Measure Period",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "s",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.continuity",
+        "keyword": "Measure Continuity",
+        "risk": "low",
+        "requires_connection": True,
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.diode",
+        "keyword": "Measure Diode",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "V",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "measure.resistance.stable",
+        "keyword": "Read Stable Resistance",
+        "risk": "low",
+        "requires_connection": True,
+        "unit": "ohm",
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "acquisition.trigger.configure",
+        "keyword": "Set DMM Trigger Source",
+        "risk": "low",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "acquisition.trigger.initiate",
+        "keyword": "Initiate DMM Measurement",
+        "risk": "low",
+        "requires_connection": True,
+        "timeout_s": 60.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "acquisition.trigger.bus",
+        "keyword": "Send DMM Bus Trigger",
+        "risk": "low",
+        "requires_connection": True,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "protocol.scpi.raw_write",
+        "keyword": "Write DMM Command",
+        "risk": "high",
+        "requires_connection": True,
+        "explicit_opt_in": True,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "protocol.scpi.raw_query",
+        "keyword": "Query DMM Command",
+        "risk": "medium",
+        "requires_connection": True,
+        "explicit_opt_in": True,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
+    {
+        "capability_id": "simulation.instrument.open",
+        "keyword": "Open Simulated DMM",
+        "risk": "none",
+        "requires_connection": False,
+        "timeout_s": 10.0,
+        "retry_safe": False,
+    },
 ]
 
 
@@ -64,7 +269,13 @@ class CapabilityRegistry:
         """Return RFDS-013 dot-separated functional capability identifiers."""
         return sorted(item["capability_id"] for item in _CAPABILITIES)
 
-    def model(self, *, connected: bool = False, identity: dict[str, Any] | None = None, mode: str = "effective") -> dict[str, Any]:
+    def model(
+        self,
+        *,
+        connected: bool = False,
+        identity: dict[str, Any] | None = None,
+        mode: str = "effective",
+    ) -> dict[str, Any]:
         source_mode = str(mode).strip().lower()
         if source_mode not in {"static", "configured", "live", "effective"}:
             raise DriverValidationError(
@@ -113,8 +324,16 @@ class CapabilityRegistry:
             },
             "features": {
                 "measurement_functions": [
-                    "VOLT_DC", "VOLT_AC", "CURR_DC", "CURR_AC", "RES_2W", "RES_4W",
-                    "FREQ", "PERIOD", "CONTINUITY", "DIODE"
+                    "VOLT_DC",
+                    "VOLT_AC",
+                    "CURR_DC",
+                    "CURR_AC",
+                    "RES_2W",
+                    "RES_4W",
+                    "FREQ",
+                    "PERIOD",
+                    "CONTINUITY",
+                    "DIODE",
                 ],
                 "multi_session": True,
                 "simulation": True,
@@ -126,7 +345,9 @@ class CapabilityRegistry:
             "extensions": {"rf_hp34401a": {"supported_models": ["34401A"]}},
         }
 
-    def get(self, capability_id: str, *, connected: bool = False, identity: dict[str, Any] | None = None) -> dict[str, Any]:
+    def get(
+        self, capability_id: str, *, connected: bool = False, identity: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         model = self.model(connected=connected, identity=identity)
         for capability in model["capabilities"]:
             if capability["capability_id"] == capability_id:

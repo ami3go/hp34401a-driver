@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import functools
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 if __package__ in (None, ""):
     _project_root = Path(__file__).resolve().parents[1]
@@ -43,13 +44,13 @@ def guarded_raw_service_call(
 def main() -> int:
     try:
         from tkinter import messagebox, ttk
-    except Exception as exc:  # pragma: no cover - environment dependent
+    except Exception as exc:  # noqa: BLE001 - pragma: no cover - environment dependent
         print(f"Tkinter GUI is not available in this Python environment: {exc}")
         return 2
 
     original_button = ttk.Button
 
-    def safe_button(master=None, **kwargs):  # noqa: ANN001, ANN003
+    def safe_button(master=None, **kwargs):
         command = kwargs.get("command")
         if is_raw_service_command(command):
             raw_command = command
@@ -76,11 +77,11 @@ def main() -> int:
     # legacy_app.main imports the shared tkinter.ttk module at call time, so
     # this narrowly scoped replacement affects its Button constructor without
     # changing the preserved GUI source. Restore it even when GUI startup fails.
-    ttk.Button = safe_button  # type: ignore[assignment]
+    ttk.Button = safe_button  # type: ignore[assignment, misc]
     try:
         return int(legacy_app.main())
     finally:
-        ttk.Button = original_button  # type: ignore[assignment]
+        ttk.Button = original_button  # type: ignore[misc]
 
 
 if __name__ == "__main__":  # pragma: no cover

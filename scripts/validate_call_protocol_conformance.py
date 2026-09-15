@@ -34,7 +34,9 @@ def live_surface() -> dict[str, str]:
 def load(path: Path) -> dict[str, Any]:
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"{path} must contain a YAML mapping")
+        raise ValueError(  # noqa: TRY004 - malformed file content, not a Python type error
+            f"{path} must contain a YAML mapping"
+        )
     return value
 
 
@@ -70,7 +72,9 @@ def validate() -> list[str]:
         vector_id = by_name.get(name, {}).get("protocol_vector")
         if vector_by_name.get(name, {}).get("id") != vector_id:
             errors.append(f"{name}: protocol_vector reference is stale")
-        if by_name.get(name, {}).get("device_facing") and not vector_by_name.get(name, {}).get("expected_outbound"):
+        if by_name.get(name, {}).get("device_facing") and not vector_by_name.get(name, {}).get(
+            "expected_outbound"
+        ):
             errors.append(f"{name}: device-facing vector has no outbound oracle")
     if str(inventory.get("driver_version")) != "26.07":
         errors.append("keyword_inventory driver_version must be 26.07")

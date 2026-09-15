@@ -13,10 +13,22 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MANDATORY_TOP_LEVEL = {
-    "rfds017_version", "identity", "mental_model", "state_machine", "resources",
-    "dependencies", "capabilities", "errors", "safety", "verification_objectives",
-    "setup_teardown", "limitations", "planning_hints", "unknown_handling",
-    "conformance", "open_questions",
+    "rfds017_version",
+    "identity",
+    "mental_model",
+    "state_machine",
+    "resources",
+    "dependencies",
+    "capabilities",
+    "errors",
+    "safety",
+    "verification_objectives",
+    "setup_teardown",
+    "limitations",
+    "planning_hints",
+    "unknown_handling",
+    "conformance",
+    "open_questions",
 }
 
 
@@ -77,7 +89,9 @@ def surface_hash(lines: list[str]) -> str:
 def load_yaml(path: Path) -> dict[str, Any]:
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"{path} must contain a mapping")
+        raise ValueError(  # noqa: TRY004 - malformed file content, not a Python type error
+            f"{path} must contain a mapping"
+        )
     return value
 
 
@@ -105,7 +119,9 @@ def validate(contract_path: Path | None = None, lock_path: Path | None = None) -
     if live != contract_lines:
         errors.append("RFDS-017 keyword signatures differ from the effective Robot library")
     if live != api_lines:
-        errors.append("RFDS-002 public_api keyword signatures differ from the effective Robot library")
+        errors.append(
+            "RFDS-002 public_api keyword signatures differ from the effective Robot library"
+        )
     inventory = load_yaml(ROOT / "tests" / "conformance" / "data" / "keyword_inventory.yaml")
     inventory_names = {str(item.get("keyword")) for item in inventory.get("keywords", [])}
     if inventory_names != live_names:

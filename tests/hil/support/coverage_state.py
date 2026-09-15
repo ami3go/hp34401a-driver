@@ -40,11 +40,7 @@ def load_results(path: Path | None) -> dict[str, dict[str, Any]]:
     results = payload.get("results", {}) if isinstance(payload, dict) else {}
     if not isinstance(results, dict):
         return {}
-    return {
-        str(name): dict(record)
-        for name, record in results.items()
-        if isinstance(record, dict)
-    }
+    return {str(name): dict(record) for name, record in results.items() if isinstance(record, dict)}
 
 
 def merge_record(path: Path | None, record: dict[str, Any]) -> None:

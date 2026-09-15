@@ -60,7 +60,9 @@ def _utc_now_iso() -> str:
 
 def _new_run_id() -> str:
     now = datetime.now(timezone.utc)
-    return f"run-{now.strftime('%Y%m%dT%H%M%S')}.{now.microsecond // 1000:03d}Z-{uuid.uuid4().hex[:8]}"
+    return (
+        f"run-{now.strftime('%Y%m%dT%H%M%S')}.{now.microsecond // 1000:03d}Z-{uuid.uuid4().hex[:8]}"
+    )
 
 
 def _json_default(obj: Any) -> Any:
@@ -68,7 +70,7 @@ def _json_default(obj: Any) -> Any:
         return str(obj)
     try:
         return _logging_utils_json_default(obj)
-    except Exception:
+    except Exception:  # noqa: BLE001 - last-resort JSON fallback for arbitrary types
         return repr(obj)
 
 
@@ -129,7 +131,7 @@ def _safe_distribution_version(dist_name: str) -> str | None:
         import importlib.metadata as importlib_metadata
 
         return importlib_metadata.version(dist_name)
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort version probe, must not raise
         return None
 
 
@@ -137,14 +139,14 @@ def _safe_module_version(module_name: str) -> str | None:
     try:
         module = __import__(module_name)
         return getattr(module, "__version__", None)
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort version probe, must not raise
         return None
 
 
 def _sanitized_hostname() -> str:
     try:
         return hashlib.sha256(socket.gethostname().encode("utf-8")).hexdigest()[:12]
-    except Exception:
+    except Exception:  # noqa: BLE001 - hostname lookup must never raise
         return "UNKNOWN"
 
 
@@ -240,7 +242,10 @@ class EvidenceRun:
             record = dict(record)
             record["sequence"] = seq
             with path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True, default=_json_default) + "\n")
+                handle.write(
+                    json.dumps(record, ensure_ascii=False, sort_keys=True, default=_json_default)
+                    + "\n"
+                )
 
     def emit_event(
         self,
@@ -474,15 +479,22 @@ class EvidenceRun:
         checksum_path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
             checksum_path.write_text(
-                "".join(f"{entry['sha256']}  {entry['path']}\n" for entry in entries), encoding="utf-8"
+                "".join(f"{entry['sha256']}  {entry['path']}\n" for entry in entries),
+                encoding="utf-8",
             )
 
     def finalize(self, status: str = "PASS") -> Path:
         if self._finalized:
             return self.root
         requested = str(status).strip().upper() or "PASS"
-        effective = "FAIL" if self._run_failed or self._error_count > 0 or requested == "FAIL" else requested
-        self.emit_event("RUN_FINISHING", f"Evidence run finalizing with status {effective}", level="INFO")
+        effective = (
+            "FAIL"
+            if self._run_failed or self._error_count > 0 or requested == "FAIL"
+            else requested
+        )
+        self.emit_event(
+            "RUN_FINISHING", f"Evidence run finalizing with status {effective}", level="INFO"
+        )
         duration_s = time.monotonic() - self._start_monotonic
         summary = {
             "schema": self.SCHEMA,
@@ -499,7 +511,9 @@ class EvidenceRun:
             "warning_count": self._warning_count,
             "dropped_events": 0,
             "evidence_completeness": "COMPLETE",
-            "device_identity_reference": "device_identity.json" if self._device_identities else None,
+            "device_identity_reference": (
+                "device_identity.json" if self._device_identities else None
+            ),
             "result_root": str(self.root),
         }
         self._write_json(self.root / "run_summary.json", summary)
@@ -548,7 +562,9 @@ class EvidenceRun:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(self.root.rglob("*")):
                 if path.is_file():
-                    archive.write(path, arcname=str(Path(self.root.name) / path.relative_to(self.root)))
+                    archive.write(
+                        path, arcname=str(Path(self.root.name) / path.relative_to(self.root))
+                    )
         return str(zip_path)
 
 
@@ -580,7 +596,9 @@ class NullEvidenceRun:
     run_id: str | None = None
 
     @contextlib.contextmanager
-    def record_operation(self, capability: str, *, arguments: Mapping[str, Any] | None = None, session_alias=None):
+    def record_operation(
+        self, capability: str, *, arguments: Mapping[str, Any] | None = None, session_alias=None
+    ):
         logger.debug("%s(%s)", capability, dict(arguments or {}))
         yield _NullOperationContext()
 
@@ -600,7 +618,9 @@ class NullEvidenceRun:
         return None
 
     def export_diagnostic_bundle(self, destination: str | None = None) -> None:
-        logger.warning("Diagnostic bundle requested but evidence_enabled=False; nothing was recorded.")
+        logger.warning(
+            "Diagnostic bundle requested but evidence_enabled=False; nothing was recorded."
+        )
 
 
 class EvidenceListener:

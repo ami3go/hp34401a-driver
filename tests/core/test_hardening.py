@@ -23,9 +23,14 @@ from hp34401a_dmm.visa_transport import validate_gpib_resource
 
 def _connected(**fake_kw):
     t = FakeTransport(**fake_kw)
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+        ),
+    )
     d.connect()
     return d, t
 
@@ -48,10 +53,15 @@ def test_r1_measurement_timeout_remeasures_not_refetches():
 
     t = OneShotFake(responses={"READ?": "+1.0E+00"})
     t.timeout_on.add("READ?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=True))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=True,
+        ),
+    )
     d.connect()
     t.history.clear()
     reading = d.measure_dc_voltage(10.0, Nplc.PLC10)
@@ -70,10 +80,15 @@ def test_r1_status_query_retry_only_for_idempotent():
     # A measurement read with retry disabled must NOT auto-retry.
     t = FakeTransport()
     t.timeout_on.add("READ?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=False,
+        ),
+    )
     d.connect()
     with pytest.raises(InstrumentTimeoutError):
         d.measure_dc_voltage(10.0, Nplc.PLC10)
@@ -99,14 +114,26 @@ def test_r2_garbled_idn_raises_settings_diagnostic():
 # --- R3: autozero in timeout estimate ---------------------------------------
 def test_r3_autozero_doubles_estimated_time():
     on = estimate_measurement_timeout_s(
-        MeasurementFunction.VOLT_DC, nplc=100, aperture_s=None, sample_count=1,
-        trigger_count=1, trigger_delay_s=0.0, ac_filter_hz=None,
-        line_frequency_hz=50, autozero=AutozeroMode.ON,
+        MeasurementFunction.VOLT_DC,
+        nplc=100,
+        aperture_s=None,
+        sample_count=1,
+        trigger_count=1,
+        trigger_delay_s=0.0,
+        ac_filter_hz=None,
+        line_frequency_hz=50,
+        autozero=AutozeroMode.ON,
     )
     off = estimate_measurement_timeout_s(
-        MeasurementFunction.VOLT_DC, nplc=100, aperture_s=None, sample_count=1,
-        trigger_count=1, trigger_delay_s=0.0, ac_filter_hz=None,
-        line_frequency_hz=50, autozero=AutozeroMode.OFF,
+        MeasurementFunction.VOLT_DC,
+        nplc=100,
+        aperture_s=None,
+        sample_count=1,
+        trigger_count=1,
+        trigger_delay_s=0.0,
+        ac_filter_hz=None,
+        line_frequency_hz=50,
+        autozero=AutozeroMode.OFF,
     )
     # NPLC=100 @ 50 Hz = 2 s/reading; ON should add ~2 s over OFF.
     assert on > off
@@ -119,16 +146,22 @@ def test_r4_no_auto_line_frequency():
     assert cfg.line_frequency_hz in (50, 60)
     # Unknown value collapses to conservative 50 inside the estimator.
     t = estimate_measurement_timeout_s(
-        MeasurementFunction.VOLT_DC, nplc=10, aperture_s=None, sample_count=1,
-        trigger_count=1, trigger_delay_s=0.0, ac_filter_hz=None,
-        line_frequency_hz=999, autozero=AutozeroMode.OFF,
+        MeasurementFunction.VOLT_DC,
+        nplc=10,
+        aperture_s=None,
+        sample_count=1,
+        trigger_count=1,
+        trigger_delay_s=0.0,
+        ac_filter_hz=None,
+        line_frequency_hz=999,
+        autozero=AutozeroMode.OFF,
     )
     assert t > 0
 
 
 # --- R6: CONFigure resets state; no stale BUS trigger across steps -----------
 def test_r6_configure_clears_prior_bus_trigger_source():
-    d, t = _connected(responses={"READ?": "+1.0E+00"})
+    d, _t = _connected(responses={"READ?": "+1.0E+00"})
     d.set_trigger_source(TriggerSource.BUS)
     assert d._trigger_source is TriggerSource.BUS
     # A new configure must reset trigger source to IMMediate so a later READ? is safe.
@@ -142,7 +175,6 @@ def test_r6_configure_clears_prior_bus_trigger_source():
 def test_r8_self_test_uses_long_timeout(monkeypatch):
     d, t = _connected(responses={"*TST?": "+0"})
     seen = []
-    orig = t.set_timeout
     t.set_timeout = lambda s: seen.append(s)  # type: ignore
     result = d.self_test()
     assert result.passed
@@ -166,13 +198,14 @@ def test_r10_valid_address_ok():
 
 def test_r10_visa_config_validates_on_construction():
     from hp34401a_dmm.visa_transport import VisaGpibTransport
+
     with pytest.raises(InstrumentConnectionError):
         VisaGpibTransport(VisaGpibConfig(resource="GPIB0::31::INSTR"))
 
 
 # --- Safety gating (spec section 24) ----------------------------------------
 def test_calibration_blocked_by_default():
-    d, t = _connected()
+    d, _t = _connected()
     with pytest.raises(SafetyError):
         d.write("CALibration:VALue 1.0")
 
@@ -186,7 +219,7 @@ def test_reset_requires_confirm():
 
 
 def test_rwlock_blocked():
-    d, t = _connected()
+    d, _t = _connected()
     with pytest.raises(SafetyError):
         d.write("SYSTem:RWLock")
 
@@ -195,9 +228,9 @@ def test_real_transport_timeout_keeps_unread_output_until_clear():
     from scpi_driver_core.exceptions import TransportTimeoutError as CoreTimeoutError
     from scpi_driver_core.transport.models import TransportDescriptor, TransportState, WriteResult
 
-    from hp34401a_dmm.transports import BaseTransport
     from hp34401a_dmm.enums import TransportType
     from hp34401a_dmm.errors import InstrumentTimeoutError, ProtocolError
+    from hp34401a_dmm.transports import BaseTransport
 
     class AlwaysTimesOutCoreTransport:
         """A minimal scpi_driver_core.transport.base.Transport whose reads
@@ -224,7 +257,9 @@ def test_real_transport_timeout_keeps_unread_output_until_clear():
         def read(self, request, *, timeout_s=None, operation_id=None):
             raise CoreTimeoutError("timeout")
 
-        def transact(self, outbound, response, *, timeout_s=None, replay_policy=None, operation_id=None):
+        def transact(
+            self, outbound, response, *, timeout_s=None, replay_policy=None, operation_id=None
+        ):
             self.write(outbound, timeout_s=timeout_s, operation_id=operation_id)
             return self.read(response, timeout_s=timeout_s, operation_id=operation_id)
 
@@ -261,6 +296,7 @@ def test_failed_connect_closes_opened_transport():
         d.connect()
     assert not t.is_open()
 
+
 # --- R11: safe low-level query timeout retry --------------------------------
 def test_r11_idempotent_query_retries_after_clear_without_error_drain():
     class OneShotStatusTimeout(FakeTransport):
@@ -275,12 +311,17 @@ def test_r11_idempotent_query_retries_after_clear_without_error_drain():
 
     t = OneShotStatusTimeout()
     t.timeout_on.add("*IDN?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=True,
-                                 max_query_retries=1,
-                                 query_retry_delay_s=0.0))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=True,
+            max_query_retries=1,
+            query_retry_delay_s=0.0,
+        ),
+    )
     d.connect()
     t.history.clear()
     raw = d.query("*IDN?")
@@ -295,10 +336,15 @@ def test_r11_idempotent_query_retries_after_clear_without_error_drain():
 def test_r11_query_timeout_no_retry_when_disabled():
     t = FakeTransport()
     t.timeout_on.add("*IDN?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=False))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=False,
+        ),
+    )
     d.connect()
     with pytest.raises(InstrumentTimeoutError):
         d.query("*IDN?")
@@ -308,13 +354,18 @@ def test_r11_query_timeout_no_retry_when_disabled():
 def test_r11_read_query_not_retried_by_raw_query_policy():
     t = FakeTransport()
     t.timeout_on.add("READ?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=True,
-                                 max_query_retries=2,
-                                 retry_all_queries_on_timeout=True,
-                                 query_retry_delay_s=0.0))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=True,
+            max_query_retries=2,
+            retry_all_queries_on_timeout=True,
+            query_retry_delay_s=0.0,
+        ),
+    )
     d.connect()
     with pytest.raises(InstrumentTimeoutError):
         d.query("READ?")
@@ -336,12 +387,17 @@ def test_r11_fetch_query_retries_after_clear():
 
     t = OneShotFetchTimeout(responses={"FETCh?": "+2.0E+00"})
     t.timeout_on.add("FETCh?")
-    d = Hp34401A(t, DriverConfig(verify_identity_on_connect=False,
-                                 drain_error_queue_on_connect=False,
-                                 clear_status_on_connect=False,
-                                 retry_queries=True,
-                                 max_query_retries=1,
-                                 query_retry_delay_s=0.0))
+    d = Hp34401A(
+        t,
+        DriverConfig(
+            verify_identity_on_connect=False,
+            drain_error_queue_on_connect=False,
+            clear_status_on_connect=False,
+            retry_queries=True,
+            max_query_retries=1,
+            query_retry_delay_s=0.0,
+        ),
+    )
     d.connect()
     t.history.clear()
     d.configure_dc_voltage(10.0, Nplc.PLC10)
@@ -357,6 +413,7 @@ def test_r11_driver_config_validates_retry_parameters():
         DriverConfig(max_query_retries=-1)
     with pytest.raises(ValueError):
         DriverConfig(query_retry_delay_s=-0.1)
+
 
 # --- v1.2.3 hardening ------------------------------------------------------
 def test_auto_range_auto_uses_configure_def_not_auto():
@@ -402,8 +459,8 @@ def test_serial_partial_response_is_timeout(monkeypatch):
     import sys
     import types
 
-    from hp34401a_dmm.serial_transport import SerialRs232Transport
     from hp34401a_dmm.config import SerialRs232Config
+    from hp34401a_dmm.serial_transport import SerialRs232Transport
 
     class PartialSerial:
         def __init__(self, **kwargs):
@@ -443,5 +500,6 @@ def test_query_non_timeout_error_sets_error_recovery():
 
 
 def test_gui_module_import_safe():
-    import hp34401a_dmm.gui as gui
+    from hp34401a_dmm import gui
+
     assert callable(gui.main)

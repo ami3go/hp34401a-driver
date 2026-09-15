@@ -18,6 +18,10 @@ import re
 import threading
 import time
 from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 from . import parser
 from .config import DriverConfig, SerialRs232Config, StabilityProfile, VisaGpibConfig
@@ -191,7 +195,7 @@ class Hp34401A:
     @classmethod
     def from_serial(
         cls, config: SerialRs232Config, driver_config: DriverConfig | None = None
-    ) -> Hp34401A:
+    ) -> Self:
         from .serial_transport import SerialRs232Transport
 
         dc = driver_config or DriverConfig()
@@ -201,7 +205,7 @@ class Hp34401A:
     @classmethod
     def from_visa_gpib(
         cls, config: VisaGpibConfig, driver_config: DriverConfig | None = None
-    ) -> Hp34401A:
+    ) -> Self:
         from .visa_transport import VisaGpibTransport
 
         dc = driver_config or DriverConfig()
@@ -209,7 +213,7 @@ class Hp34401A:
         return cls(transport, dc)
 
     # ------------------------------------------------------------------ context
-    def __enter__(self) -> Hp34401A:
+    def __enter__(self) -> Self:
         self.connect()
         return self
 
@@ -334,9 +338,7 @@ class Hp34401A:
             if self.trace_callback is not None:
                 self.trace_callback("outbound", command)
             attempts_left = (
-                self._cfg.max_query_retries
-                if self._should_retry_timeout_query(command)
-                else 0
+                self._cfg.max_query_retries if self._should_retry_timeout_query(command) else 0
             )
             last_timeout: InstrumentTimeoutError | None = None
 
@@ -396,7 +398,7 @@ class Hp34401A:
         return parser.parse_float(self.query(command))
 
     def query_int(self, command: str) -> int:
-        return int(round(self.query_float(command)))
+        return round(self.query_float(command))
 
     def _guard_safety(self, command: str) -> None:
         if _CAL_COMMAND_RE.match(command) and not self._cfg.allow_calibration_commands:
@@ -478,9 +480,7 @@ class Hp34401A:
                 self._last_configure()
                 actions.append("reconfigure")
             self._state = (
-                CommandState.CONFIGURED
-                if self._last_configure
-                else CommandState.CONNECTED_REMOTE
+                CommandState.CONFIGURED if self._last_configure else CommandState.CONNECTED_REMOTE
             )
             return RecoveryReport(True, tuple(actions), self._state.value)
         except Hp34401AError as exc:
@@ -584,7 +584,9 @@ class Hp34401A:
                 f"Unsupported {function.name} range {range_value!r}; valid: {list(table)}"
             )
         # Emit a clean numeric token.
-        return repr(float(range_value)) if range_value != int(range_value) else str(int(range_value))
+        return (
+            repr(float(range_value)) if range_value != int(range_value) else str(int(range_value))
+        )
 
     @staticmethod
     def _validate_counts(sample_count: int, trigger_count: int) -> None:
@@ -701,13 +703,17 @@ class Hp34401A:
         def _do() -> None:
             self._apply_configure(MeasurementFunction.FREQ, voltage_range_v, aperture_s=aperture_s)
             self.write(f"SENSe:FREQuency:APERture {_num(aperture_s.value)}")
+
         self._last_configure = _do
         _do()
 
     def configure_period(self, voltage_range_v: float | AutoRange, aperture_s: Aperture) -> None:
         def _do() -> None:
-            self._apply_configure(MeasurementFunction.PERIOD, voltage_range_v, aperture_s=aperture_s)
+            self._apply_configure(
+                MeasurementFunction.PERIOD, voltage_range_v, aperture_s=aperture_s
+            )
             self.write(f"SENSe:PERiod:APERture {_num(aperture_s.value)}")
+
         self._last_configure = _do
         _do()
 
@@ -855,7 +861,11 @@ class Hp34401A:
         with self._locked():
             from .stability import read_stable_resistance as _read_stable
 
-            measure = self.measure_4wire_resistance if profile.four_wire else self.measure_2wire_resistance
+            measure = (
+                self.measure_4wire_resistance
+                if profile.four_wire
+                else self.measure_2wire_resistance
+            )
 
             def sampler() -> MeasurementReading:
                 return measure(profile.range_ohm, profile.nplc)

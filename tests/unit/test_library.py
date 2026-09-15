@@ -1,9 +1,9 @@
 import pytest
 from robot.libdocpkg import LibraryDocumentation
 
+from hp34401a_dmm import MeasurementNotStableError
 from rf_hp34401a import Hp34401ALibrary
 from rf_hp34401a.exceptions import Hp34401ARobotError
-from hp34401a_dmm import MeasurementNotStableError
 
 
 def lib_with_reading(value=12.5):
@@ -310,8 +310,9 @@ def test_identity_and_terminal_assertion_failures():
 
 
 def test_failure_branches_for_model_selftest_invalid_reading_and_cleanup(monkeypatch):
-    from hp34401a_dmm import MeasurementFunction, MeasurementReading
     from datetime import datetime, timezone
+
+    from hp34401a_dmm import MeasurementFunction, MeasurementReading
 
     lib = lib_with_reading(1)
     monkeypatch.setattr(lib, "identify_dmm", lambda alias=None: {"model": "NOT-A-DMM"})

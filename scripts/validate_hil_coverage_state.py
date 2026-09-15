@@ -26,6 +26,7 @@ def _load(name: str, path: Path):
 def main() -> int:
     state_module = _load("coverage_state", SUPPORT / "coverage_state.py")
     import sys
+
     sys.modules["coverage_state"] = state_module
     listener = _load("RealHardwareApiListener", SUPPORT / "RealHardwareApiListener.py")
 
